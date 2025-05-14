@@ -1,5 +1,4 @@
 "use client";
-
 import Footer from "@/components/Footer";
 import Header from "@/components/Header";
 import ScrollToTop from "@/components/ScrollToTop";
@@ -10,6 +9,8 @@ import "../styles/prism-vsc-dark-plus.css";
 import ToasterContext from "./api/contex/ToasetContex";
 import { useEffect, useState } from "react";
 import PreLoader from "@/components/Common/PreLoader";
+import * as React from "react";
+import {HeroUIProvider} from "@heroui/react";
 
 export default function RootLayout({
   children,
@@ -35,17 +36,19 @@ export default function RootLayout({
           <PreLoader />
         ) : (
           <SessionProvider>
-            <ThemeProvider
-              attribute="class"
-              enableSystem={false}
-              defaultTheme="light"
-            >
-              <ToasterContext />
-              <Header />
-              {children}
-              <Footer />
-              <ScrollToTop />
-            </ThemeProvider>
+            <HeroUIProvider>
+              <ThemeProvider
+                attribute="class"
+                enableSystem={false}
+                defaultTheme="light"
+              >
+                <ToasterContext />
+                <Header />
+                {children}
+                <Footer />
+                <ScrollToTop />
+              </ThemeProvider>
+            </HeroUIProvider>
           </SessionProvider>
         )}
       </body>

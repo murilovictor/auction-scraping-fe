@@ -148,7 +148,8 @@ const Header = () => {
                 >
                   <ul className="block lg:ml-8 lg:flex lg:gap-x-8 xl:ml-14 xl:gap-x-12">
                     {menuData.map((menuItem, index) =>
-                      menuItem.path ? (
+                      !menuItem.secure || session ? (
+                        menuItem.path ? (
                         <li key={index} className="group relative">
                           {pathUrl !== "/" ? (
                             <Link
@@ -253,7 +254,8 @@ const Header = () => {
                             ))}
                           </div>
                         </li>
-                      ),
+                      )
+                      ) : null,
                     )}
                   </ul>
                 </nav>
