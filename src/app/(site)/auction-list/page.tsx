@@ -1,6 +1,7 @@
 import Breadcrumb from "@/components/Common/Breadcrumb";
 import { Metadata } from "next";
 import AuctionList from "@/components/AuctionList";
+import FilterBar from "@/components/FilterBar";
 
 export const metadata: Metadata = {
   title: "Imóveis",

@@ -1,13 +1,10 @@
 "use client";
 
-import React, { useCallback, useState } from "react";
+import React, { useState } from "react";
 import useSWR from "swr";
 import {
-  Button,
+  Avatar,
   getKeyValue,
-  Select,
-  SelectItem,
-  Slider,
   Table,
   TableBody,
   TableCell,
@@ -17,7 +14,7 @@ import {
 } from "@heroui/react";
 import { Pagination } from "@heroui/pagination";
 import { Spinner } from "@heroui/spinner";
-import { User } from "@heroui/user";
+import FilterBar from "@/components/FilterBar";
 
 const fetcher = (url: string) =>
   fetch(url).then(async (res: any) => {
@@ -26,26 +23,19 @@ const fetcher = (url: string) =>
 
 export default function PropertiesList() {
   const [page, setPage] = useState(1);
-  // UI-controlled inputs
-  const [priceRange, setPriceRange] = useState<[number, number]>([0, 5000000]);
-  const [propertyType, setPropertyType] = useState("");
-  // Applied filters
-  const [appliedRange, setAppliedRange] = useState<[number, number]>([
-    0, 5000000,
-  ]);
-  const [appliedType, setAppliedType] = useState("");
 
-  // Build query string from applied filters
+  // Novo estado para a query string dos filtros
+  const [filterQuery, setFilterQuery] = useState("");
+
+  // Build query string from applied filters (mantém paginação)
   const query = new URLSearchParams({
     page: String(page),
     limit: "10",
-    minPrice: String(appliedRange[0]),
-    maxPrice: String(appliedRange[1]),
-    ...(appliedType && { propertyType: appliedType }),
   }).toString();
 
+  // Usa a query do filtro junto com paginação
   const { data, isLoading } = useSWR(
-    `http://localhost:3009/api/properties?${query}&propertyType=Casa`,
+    `http://localhost:3009/api/properties?${query}&${filterQuery}`,
     fetcher,
     {
       keepPreviousData: true,
@@ -69,58 +59,17 @@ export default function PropertiesList() {
       minimumFractionDigits: 2,
     }).format(value);
 
-  const applyFilters = useCallback(() => {
-    setAppliedRange(priceRange);
-    setAppliedType(propertyType);
-    setPage(1);
-  }, [priceRange, propertyType]);
+
+  // Atualiza a query string dos filtros ao aplicar
+  const handleApply = (qs: string) => {
+    setFilterQuery(qs);
+    setPage(1); // volta para a primeira página ao filtrar
+  };
 
   return (
     <div className="w-full p-6">
-      {/* Filter Form */}
-      <div className="rounded-lg bg-white p-4 shadow-sm">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-end">
-          <div className="lg:col-span-6">
-            <div>
-              <label htmlFor="priceRange" className="block text-sm font-medium">
-                Preço: {formatCurrency(priceRange[0])} –{" "}
-                {formatCurrency(priceRange[1])}
-              </label>
-              <Slider
-                id="priceRange"
-                formatOptions={{ style: "currency", currency: "BRA" }}
-                maxValue={1000000}
-                minValue={0}
-                step={20000}
-                value={priceRange}
-                onChange={(value) => setPriceRange(value as [number, number])}
-                className="max-w-md"
-              />
-            </div>
-
-            <div className="lg:col-span-4">
-              <label htmlFor="typeFilter" className="block text-sm font-medium">
-                Tipo de imóvel
-              </label>
-              <Select
-                className="max-w-xs"
-                label="property type"
-                onChange={(e) => setPropertyType(e.target.value)}
-              >
-                <SelectItem key="Casa">Casa</SelectItem>
-                <SelectItem key="Apartamento">Apartamento</SelectItem>
-                <SelectItem key="Terreno">Terreno</SelectItem>
-              </Select>
-
-              <div className="lg:col-span-2 flex justify-end">
-                <Button onClick={applyFilters} className="mt-1" color="primary">
-                  Filtrar
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+      {/* Filtro */}
+      <FilterBar onApply={handleApply} />
 
       {/* Table */}
       <div className="w-full overflow-auto">
@@ -209,11 +158,12 @@ export default function PropertiesList() {
                   if (columnKey === "photo") {
                     return (
                       <TableCell>
-                        <User
-                          avatarProps={{ radius: "lg", src: rawValue }}
-                          description={item?.identification}
-                          name={item?.type}
-                        ></User>
+                        <Avatar
+                          radius="sm"
+                          isBordered={true}
+                          className="h-20 w-20 text-large"
+                          src={rawValue}
+                        />
                       </TableCell>
                     );
                   }
