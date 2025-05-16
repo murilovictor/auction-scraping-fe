@@ -299,7 +299,13 @@ const FilterBar: React.FC<{ onApply?: (qs: string) => void; initialSelections?: 
   // renderiza chips de filtros aplicados
   const renderChips = () => {
     const chips: React.ReactNode[] = [];
-    for (const key of Object.keys(applied) as FilterKey[]) {
+    // Garante que sort (ordenacao) venha primeiro
+    const keys = Object.keys(applied) as FilterKey[];
+    const orderedKeys = [
+      ...keys.filter((k) => k === "sort"),
+      ...keys.filter((k) => k !== "sort"),
+    ];
+    for (const key of orderedKeys) {
       const val = applied[key];
       if (!val || (Array.isArray(val) && val.length === 0)) continue;
 
