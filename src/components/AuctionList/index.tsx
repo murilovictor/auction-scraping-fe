@@ -14,7 +14,8 @@ import {
 } from "@heroui/react";
 import { Pagination } from "@heroui/pagination";
 import { Spinner } from "@heroui/spinner";
-import FilterBar from "@/components/FilterBar";
+import FilterBar, { getInitialSelections, buildQueryString } from "@/components/FilterBar";
+import { useRouter, useSearchParams } from "next/navigation";
 
 const fetcher = (url: string) =>
   fetch(url).then(async (res: any) => {
@@ -22,10 +23,13 @@ const fetcher = (url: string) =>
   });
 
 export default function PropertiesList() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [page, setPage] = useState(1);
 
   // Novo estado para a query string dos filtros
   const [filterQuery, setFilterQuery] = useState("");
+  const [initialSelections, setInitialSelections] = useState<any>(null);
 
   // Build query string from applied filters (mantém paginação)
   const query = new URLSearchParams({
@@ -41,6 +45,22 @@ export default function PropertiesList() {
       keepPreviousData: true,
     },
   );
+
+  React.useEffect(() => {
+    // Usa a query string da URL como está
+    const qs = window.location.search.replace(/^\?/, "");
+    setFilterQuery(qs);
+    setInitialSelections(undefined);
+
+    // Se não há parâmetros na URL, força a URL com os defaults
+    if (!qs) {
+      const defaults = getInitialSelections();
+      const defaultQs = buildQueryString(defaults);
+      setFilterQuery(defaultQs);
+      router.replace(`${window.location.pathname}${defaultQs ? `?${defaultQs}` : ""}`, { scroll: false });
+      setInitialSelections(defaults);
+    }
+  }, []);
 
   const properties = data?.data ?? [];
   const totalPages = data?.meta?.pages ?? 0;
@@ -64,12 +84,15 @@ export default function PropertiesList() {
   const handleApply = (qs: string) => {
     setFilterQuery(qs);
     setPage(1); // volta para a primeira página ao filtrar
+    // Atualiza a URL sem reload
+    const url = `${window.location.pathname}${qs ? `?${qs}` : ""}`;
+    router.replace(url, { scroll: false });
   };
 
   return (
     <div className="w-full p-6">
       {/* Filtro */}
-      <FilterBar onApply={handleApply} />
+      <FilterBar onApply={handleApply} initialQueryString={filterQuery} />
 
       {/* Table */}
       <div className="w-full overflow-auto">

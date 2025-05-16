@@ -8,7 +8,7 @@ import { Checkbox, CheckboxGroup } from "@heroui/checkbox";
 // Configuração inicial dos filtros
 type SortOption = { value: string; label: string; sortField: string; sortOrder: 'asc' | 'desc' };
 
-const filterConfig = [
+export const filterConfig = [
   {
     key: "sort",
     label: "Ordenação",
@@ -97,7 +97,7 @@ const filterConfig = [
 type FilterKey = (typeof filterConfig)[number]["key"];
 type Selections = Record<FilterKey, any>;
 
-const getInitialSelections = (): Selections => {
+export const getInitialSelections = (): Selections => {
   const initial: any = {};
   filterConfig.forEach((cfg) => {
     if (cfg.defaultValue) {
@@ -170,15 +170,97 @@ export const buildQueryString = (filters: Selections): string => {
   return query2 ? `${query2}` : "";
 };
 
-const FilterBar: React.FC<{ onApply?: (qs: string) => void }> = ({
+const parseQueryStringToSelections = (qs: string): Selections => {
+  const params = new URLSearchParams(qs);
+  const selections: any = {};
+  params.forEach((value, key) => {
+    if (["propertyType", "modality", "paymentConditions"].includes(key)) {
+      selections[key] = value.split(",");
+    } else if (key === "priceMin" || key === "priceMax") {
+      selections.price = selections.price || {};
+      if (key === "priceMin") selections.price.min = Number(value);
+      if (key === "priceMax") selections.price.max = Number(value);
+    } else if (
+      ["firstDiscountMin", "firstDiscountMax", "secondDiscountMin", "secondDiscountMax"].includes(key)
+    ) {
+      selections.discounts = selections.discounts || {
+        discount1: { min: 0, max: 100 },
+        discount2: { min: 0, max: 100 },
+      };
+      if (key === "firstDiscountMin") selections.discounts.discount1.min = Number(value);
+      if (key === "firstDiscountMax") selections.discounts.discount1.max = Number(value);
+      if (key === "secondDiscountMin") selections.discounts.discount2.min = Number(value);
+      if (key === "secondDiscountMax") selections.discounts.discount2.max = Number(value);
+    } else {
+      selections[key] = value;
+    }
+  });
+  // Garante que discounts, discount1 e discount2 sempre existam
+  if (!selections.discounts) {
+    selections.discounts = {
+      discount1: { min: 0, max: 100 },
+      discount2: { min: 0, max: 100 }
+    };
+  } else {
+    if (!selections.discounts.discount1) {
+      selections.discounts.discount1 = { min: 0, max: 100 };
+    }
+    if (!selections.discounts.discount2) {
+      selections.discounts.discount2 = { min: 0, max: 100 };
+    }
+  }
+  return selections;
+};
+
+const FilterBar: React.FC<{ onApply?: (qs: string) => void; initialSelections?: Selections | null; initialQueryString?: string }> = ({
   onApply,
+  initialSelections,
+  initialQueryString,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<FilterKey>("sort");
+
+  // Prioridade: initialSelections > initialQueryString > defaults
+  const selectionsFromQuery = initialQueryString
+    ? parseQueryStringToSelections(initialQueryString)
+    : undefined;
+  const isEmpty =
+    (!initialSelections || Object.keys(initialSelections).length === 0) &&
+    (!selectionsFromQuery || Object.keys(selectionsFromQuery).length === 0);
   const [selections, setSelections] = useState<Selections>(
-    getInitialSelections(),
+    initialSelections && Object.keys(initialSelections).length > 0
+      ? initialSelections
+      : selectionsFromQuery && Object.keys(selectionsFromQuery).length > 0
+      ? selectionsFromQuery
+      : getInitialSelections()
   );
-  const [applied, setApplied] = useState<Selections>(getInitialSelections());
+  const [applied, setApplied] = useState<Selections>(
+    initialSelections && Object.keys(initialSelections).length > 0
+      ? initialSelections
+      : selectionsFromQuery && Object.keys(selectionsFromQuery).length > 0
+      ? selectionsFromQuery
+      : getInitialSelections()
+  );
+
+  // Sincroniza selections/applied se initialSelections OU initialQueryString mudar
+  React.useEffect(() => {
+    const selectionsFromQuery = initialQueryString
+      ? parseQueryStringToSelections(initialQueryString)
+      : undefined;
+    const isEmpty =
+      (!initialSelections || Object.keys(initialSelections).length === 0) &&
+      (!selectionsFromQuery || Object.keys(selectionsFromQuery).length === 0);
+    if (initialSelections && Object.keys(initialSelections).length > 0) {
+      setSelections(initialSelections);
+      setApplied(initialSelections);
+    } else if (selectionsFromQuery && Object.keys(selectionsFromQuery).length > 0) {
+      setSelections(selectionsFromQuery);
+      setApplied(selectionsFromQuery);
+    } else if (isEmpty) {
+      setSelections(getInitialSelections());
+      setApplied(getInitialSelections());
+    }
+  }, [initialSelections, initialQueryString]);
 
   // abre/fecha painel
   const togglePanel = () => setIsOpen((open) => !open);
@@ -243,7 +325,7 @@ const FilterBar: React.FC<{ onApply?: (qs: string) => void }> = ({
         );
       } else {
         const config = filterConfig.find((f) => f.key === key)!;
-        const opt = config.options && config.options.find((o) => o.value === val);
+        const opt = config?.options && config?.options?.find((o) => o.value === val);
         if (opt) {
           chips.push(
             <Chip key={key} onClose={() => clearFilter(key)}>
@@ -402,7 +484,10 @@ const FilterBar: React.FC<{ onApply?: (qs: string) => void }> = ({
                             minValue={0}
                             maxValue={100}
                             step={1}
-                            value={[selections.discounts?.discount1?.min, selections.discounts?.discount1?.max]}
+                            value={[
+                              Number.isFinite(selections.discounts?.discount1?.min) ? selections.discounts?.discount1.min : 0,
+                              Number.isFinite(selections.discounts?.discount1?.max) ? selections.discounts.discount1.max : 100,
+                            ]}
                             onChange={(value) => {
                               if (Array.isArray(value)) {
                                 const [min, max] = value;
@@ -438,7 +523,10 @@ const FilterBar: React.FC<{ onApply?: (qs: string) => void }> = ({
                             minValue={0}
                             maxValue={100}
                             step={1}
-                            value={[selections.discounts?.discount2?.min, selections.discounts?.discount2?.max]}
+                            value={[
+                              Number.isFinite(selections.discounts?.discount2?.min) ? selections.discounts?.discount2?.min : 0,
+                              Number.isFinite(selections.discounts?.discount2?.max) ? selections.discounts?.discount2?.max : 100,
+                            ]}
                             onChange={(value) => {
                               if (Array.isArray(value)) {
                                 const [min, max] = value;
