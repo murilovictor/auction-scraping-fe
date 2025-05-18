@@ -21,6 +21,7 @@ type Property = {
   firstSaleDiscountPercent?: number;
   secondSaleDiscountPercent?: number;
   city?: string;
+  address?: string;
   state?: string;
   neighborhood?: string;
   isFavorite?: boolean;
@@ -150,6 +151,9 @@ export default function PropertiesList() {
       <div className="sticky z-10 bg-white pb-2 top-20">
         <FilterBar onApply={handleApply} initialQueryString={filterQuery} />
       </div>
+      <div className="w-full text-sm text-gray-700 font-semibold mb-2 px-2">
+        {total} imóvel{total === 1 ? '' : 'es'} encontrado{total === 1 ? '' : 's'}
+      </div>
       {totalPages > 1 && (
         <div className="flex justify-center mt-12">
           <Pagination
@@ -267,9 +271,21 @@ export default function PropertiesList() {
                 <div className="border-t border-gray-200 my-0" />
 
                 {/* Localização */}
-                <div className="text-xs text-gray-500 mt-2 font-semibold">
+                {/* <div className="text-xs text-gray-500 mt-2 font-semibold">
                   {item.city} - {item.state} {item.neighborhood && `- ${item.neighborhood}`}
-                </div>
+                </div> */}
+
+                {item.address && (
+                  <a
+                    href={`https://www.google.com/search?q=${encodeURIComponent(item.address)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-gray-500 mt-1 font-semibold underline hover:text-primary transition-colors"
+                    title="Buscar endereço no Google"
+                  >
+                    {item.address}
+                  </a>
+                )}
                 {/* Link para o site do leiloeiro */}
                 {item.propertyLink && (
                   <a
