@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button, Chip, Slider, Tab, Tabs, Popover, PopoverTrigger, PopoverContent } from "@heroui/react";
 import { Radio, RadioGroup } from "@heroui/radio";
 import { Checkbox, CheckboxGroup } from "@heroui/checkbox";
@@ -8,106 +8,34 @@ import { Checkbox, CheckboxGroup } from "@heroui/checkbox";
 // Configuração inicial dos filtros
 type SortOption = { value: string; label: string; sortField: string; sortOrder: 'asc' | 'desc' };
 
-export const filterConfig = [
-  {
-    key: "sort",
-    label: "Ordenação",
-    description: "Ordenação",
-    title: "Escolha a ordenação",
-    type: "radio" as const,
-    options: [
-      { value: "dataPrimeiroLeilao:asc", label: "Data do primeiro leilão (asc)", sortField: "dataPrimeiroLeilao", sortOrder: "asc" },
-      { value: "dataSegundoLeilao:asc", label: "Data do segundo leilão (asc)", sortField: "dataSegundoLeilao", sortOrder: "asc" },
-      { value: "precoPrimeiroLeilao:asc", label: "Menor preço do primeiro leilão", sortField: "precoPrimeiroLeilao", sortOrder: "asc" },
-      { value: "precoPrimeiroLeilao:desc", label: "Maior preço do primeiro leilão", sortField: "precoPrimeiroLeilao", sortOrder: "desc" },
-      { value: "descontoPrimeiroLeilao:desc", label: "Maior desconto do primeiro leilão", sortField: "descontoPrimeiroLeilao", sortOrder: "desc" },
-      { value: "precoSegundoLeilao:asc", label: "Menor preço do segundo leilão", sortField: "precoSegundoLeilao", sortOrder: "asc" },
-      { value: "precoSegundoLeilao:desc", label: "Maior preço do segundo leilão", sortField: "precoSegundoLeilao", sortOrder: "desc" },
-      { value: "descontoSegundoLeilao:desc", label: "Maior desconto do segundo leilão", sortField: "descontoSegundoLeilao", sortOrder: "desc" },
-    ] as SortOption[],
-    defaultValue: "descontoSegundoLeilao:desc",
-  },
-  {
-    key: "propertyType",
-    label: "Tipo",
-    description: "Tipo",
-    title: "Selecione o(s) tipo(s) de imóvel",
-    type: "checkbox" as const,
-    options: [
-      { value: "Apartamento", label: "Apartamento" },
-      { value: "Casa", label: "Casa" },
-      { value: "Comercial", label: "Comercial" },
-      { value: "Galpão", label: "Galpão" },
-      { value: "Imóvel rural", label: "Imóvel rural" },
-      { value: "Loja", label: "Loja" },
-      { value: "Prédio", label: "Prédio" },
-      { value: "Sala", label: "Sala" },
-      { value: "Sobrado", label: "Sobrado" },
-      { value: "Terreno", label: "Terreno" },
+declare type FilterConfigItem = {
+  key: string;
+  label: string;
+  description: string;
+  title: string;
+  type: string;
+  defaultValue: any;
+  options?: any;
+  slider?: any;
+};
 
-    ],
-    defaultValue: [] as string[],
-  },
-  {
-    key: "modality",
-    label: "Modalidade",
-    description: "Modalidade",
-    title: "Escolha a modalidade",
-    type: "checkbox" as const,
-    options: [
-      { value: "sfiEditalUnico", label: "Leilão SFI - Edital Único" },
-      { value: "vendaDiretaOnline", label: "Venda Direta Online" },
-      { value: "vendaOnline", label: "Venda Online" },
-      { value: "licitacaoAberta", label: "Licitação Aberta" },
-    ],
-    defaultValue: [] as string[],
-  },
-  {
-    key: "paymentConditions",
-    label: "Pagamento",
-    description: "Pagamento",
-    title: "Formas de pagamento",
-    type: "checkbox" as const,
-    options: [
-      { value: "financiamento", label: "Financiamento" },
-      { value: "aVista", label: "À Vista" },
-      { value: "fgts", label: "FGTS" },
-    ],
-    defaultValue: [] as string[],
-  },
-  {
-    key: "price",
-    label: "Preço",
-    description: "Preço",
-    title: "Defina o preço desejado",
-    type: "slider" as const,
-    slider: { min: 0, max: 5000000, step: 5000 },
-    defaultValue: { min: 0, max: 5000000 },
-  },
-  {
-    key: "discounts",
-    label: "Descontos",
-    description: "Descontos",
-    title: "Defina os intervalos de desconto (%)",
-    type: "custom" as const,
-    defaultValue: { discount1: { min: 0, max: 100 }, discount2: { min: 0, max: 100 } },
-  },
-];
+declare type FilterConfig = FilterConfigItem[];
 
-type FilterKey = (typeof filterConfig)[number]["key"];
+type FilterKey = string;
 type Selections = Record<FilterKey, any>;
 
-export const getInitialSelections = (): Selections => {
+export const getInitialSelections = (filterConfig: FilterConfig): Selections => {
   const initial: any = {};
+  if (!filterConfig) return initial;
   filterConfig.forEach((cfg) => {
-    if (cfg.defaultValue) {
+    if (cfg.defaultValue !== undefined) {
       initial[cfg.key] = cfg.defaultValue;
     }
   });
   return initial;
 };
 
-export const buildQueryString = (filters: Selections): string => {
+export const buildQueryString = (filters: Selections, filterConfig: FilterConfig): string => {
   const params = new URLSearchParams();
 
   if (filters.modality && filters.modality.length) {
@@ -138,13 +66,23 @@ export const buildQueryString = (filters: Selections): string => {
     }
   }
 
+  // Localização
+  if (filters.location) {
+    if (filters.location.state) {
+      params.set("state", filters.location.state);
+    }
+    if (filters.location.city) {
+      params.set("city", filters.location.city);
+    }
+  }
+
   // sort (agora suporta múltiplos sort)
   if (filters.sort) {
     const sortConfig = filterConfig.find(f => f.key === "sort");
     const sortOptions = sortConfig?.options as SortOption[];
     if (Array.isArray(filters.sort)) {
       filters.sort.forEach((sortValue: string) => {
-        const opt = sortOptions?.find((o) => o.value === sortValue);
+        const opt = sortOptions?.find((o: any) => o.value === sortValue);
         if (opt) {
           params.append("sort", `${opt.sortField}:${opt.sortOrder}`);
         } else {
@@ -154,7 +92,7 @@ export const buildQueryString = (filters: Selections): string => {
         }
       });
     } else {
-      const opt = sortOptions?.find((o) => o.value === filters.sort);
+      const opt = sortOptions?.find((o: any) => o.value === filters.sort);
       if (opt) {
         params.append("sort", `${opt.sortField}:${opt.sortOrder}`);
       } else {
@@ -170,7 +108,7 @@ export const buildQueryString = (filters: Selections): string => {
   return query2 ? `${query2}` : "";
 };
 
-const parseQueryStringToSelections = (qs: string): Selections => {
+const parseQueryStringToSelections = (qs: string, filterConfig: FilterConfig): Selections => {
   const params = new URLSearchParams(qs);
   const selections: any = {};
   params.forEach((value, key) => {
@@ -191,6 +129,9 @@ const parseQueryStringToSelections = (qs: string): Selections => {
       if (key === "firstDiscountMax") selections.discounts.discount1.max = Number(value);
       if (key === "secondDiscountMin") selections.discounts.discount2.min = Number(value);
       if (key === "secondDiscountMax") selections.discounts.discount2.max = Number(value);
+    } else if (key === "state" || key === "city") {
+      selections.location = selections.location || {};
+      selections.location[key] = value;
     } else {
       selections[key] = value;
     }
@@ -217,60 +158,62 @@ const FilterBar: React.FC<{ onApply?: (qs: string) => void; initialSelections?: 
   initialSelections,
   initialQueryString,
 }) => {
+  const [filterConfig, setFilterConfig] = useState<FilterConfig | null>(null);
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<FilterKey>("sort");
+  const [selections, setSelections] = useState<Selections>({});
+  const [applied, setApplied] = useState<Selections>({});
 
-  // Prioridade: initialSelections > initialQueryString > defaults
-  const selectionsFromQuery = initialQueryString
-    ? parseQueryStringToSelections(initialQueryString)
-    : undefined;
-  const isEmpty =
-    (!initialSelections || Object.keys(initialSelections).length === 0) &&
-    (!selectionsFromQuery || Object.keys(selectionsFromQuery).length === 0);
-  const [selections, setSelections] = useState<Selections>(
-    initialSelections && Object.keys(initialSelections).length > 0
-      ? initialSelections
-      : selectionsFromQuery && Object.keys(selectionsFromQuery).length > 0
-      ? selectionsFromQuery
-      : getInitialSelections()
-  );
-  const [applied, setApplied] = useState<Selections>(
-    initialSelections && Object.keys(initialSelections).length > 0
-      ? initialSelections
-      : selectionsFromQuery && Object.keys(selectionsFromQuery).length > 0
-      ? selectionsFromQuery
-      : getInitialSelections()
-  );
+  // Carrega os filtros do backend
+  useEffect(() => {
+    fetch("http://localhost:3009/api/properties/filters")
+      .then(res => res.json())
+      .then((data) => {
+        setFilterConfig(data);
+        const initial = getInitialSelections(data);
+        setSelections(initial);
+        setApplied(initial);
+      });
+  }, []);
 
-  // Sincroniza selections/applied se initialSelections OU initialQueryString mudar
-  React.useEffect(() => {
+  // Sincroniza selections/applied sempre que initialQueryString mudar
+  useEffect(() => {
+    if (!filterConfig) return;
     const selectionsFromQuery = initialQueryString
-      ? parseQueryStringToSelections(initialQueryString)
+      ? parseQueryStringToSelections(initialQueryString, filterConfig)
       : undefined;
-    const isEmpty =
-      (!initialSelections || Object.keys(initialSelections).length === 0) &&
-      (!selectionsFromQuery || Object.keys(selectionsFromQuery).length === 0);
-    if (initialSelections && Object.keys(initialSelections).length > 0) {
-      setSelections(initialSelections);
-      setApplied(initialSelections);
-    } else if (selectionsFromQuery && Object.keys(selectionsFromQuery).length > 0) {
+    if (selectionsFromQuery && Object.keys(selectionsFromQuery).length > 0) {
       setSelections(selectionsFromQuery);
       setApplied(selectionsFromQuery);
-    } else if (isEmpty) {
-      setSelections(getInitialSelections());
-      setApplied(getInitialSelections());
+    } else {
+      // Se não houver filtros na query, reseta para o default
+      const initial = getInitialSelections(filterConfig);
+      setSelections(initial);
+      setApplied(initial);
     }
-  }, [initialSelections, initialQueryString]);
+  }, [initialQueryString, filterConfig]);
+
+  // Sincroniza selections com applied ao abrir o painel de filtros
+  useEffect(() => {
+    if (isOpen) {
+      setSelections(applied);
+    }
+  }, [isOpen]);
+
+  // Só renderiza se filterConfig estiver carregado
+  if (!filterConfig) {
+    return <div className="p-4 text-center text-gray-500">Carregando filtros...</div>;
+  }
 
   // abre/fecha painel
   const togglePanel = () => setIsOpen((open) => !open);
 
   // limpa todos filtros
   const clearAll = () => {
-    const initial = getInitialSelections();
+    const initial = getInitialSelections(filterConfig);
     setSelections(initial);
     setApplied(initial);
-    onApply && onApply(buildQueryString(initial));
+    onApply && onApply(buildQueryString(initial, filterConfig));
   };
 
   // limpa apenas a aba ativa
@@ -286,13 +229,13 @@ const FilterBar: React.FC<{ onApply?: (qs: string) => void; initialSelections?: 
     const defaultValue = filterConfig.find(f => f.key === key)!.defaultValue;
     setSelections(prev => ({ ...prev, [key]: defaultValue }));
     setApplied(prev => ({ ...prev, [key]: defaultValue }));
-    onApply && onApply(buildQueryString({ ...applied, [key]: defaultValue }));
+    onApply && onApply(buildQueryString({ ...applied, [key]: defaultValue }, filterConfig));
   };
 
   // aplicar seleção e fechar
   const applyFilters = () => {
     setApplied(selections);
-    onApply && onApply(buildQueryString(selections));
+    onApply && onApply(buildQueryString(selections, filterConfig));
     setIsOpen(false);
   };
 
@@ -320,7 +263,7 @@ const FilterBar: React.FC<{ onApply?: (qs: string) => void; initialSelections?: 
         const config = filterConfig.find((f) => f.key === key)!;
         const labels = val
           .map((item: string) => {
-            const opt = config.options!.find((o) => o.value === item);
+            const opt = config.options!.find((o: any) => o.value === item);
             return opt ? opt.label : item;
           })
           .join(", ");
@@ -331,7 +274,7 @@ const FilterBar: React.FC<{ onApply?: (qs: string) => void; initialSelections?: 
         );
       } else {
         const config = filterConfig.find((f) => f.key === key)!;
-        const opt = config?.options && config?.options?.find((o) => o.value === val);
+        const opt = config?.options && config?.options?.find((o: any) => o.value === val);
         if (opt) {
           chips.push(
             <Chip key={key} onClose={() => clearFilter(key)}>
@@ -353,7 +296,7 @@ const FilterBar: React.FC<{ onApply?: (qs: string) => void; initialSelections?: 
                 const newDiscounts = { ...applied.discounts, discount1: { min: 0, max: 100 } };
                 setSelections(prev => ({ ...prev, discounts: newDiscounts }));
                 setApplied(prev => ({ ...prev, discounts: newDiscounts }));
-                onApply && onApply(buildQueryString({ ...applied, discounts: newDiscounts }));
+                onApply && onApply(buildQueryString({ ...applied, discounts: newDiscounts }, filterConfig));
               }}
             >
               Primeira Praça: {val1.min}% – {val1.max}%
@@ -368,10 +311,44 @@ const FilterBar: React.FC<{ onApply?: (qs: string) => void; initialSelections?: 
                 const newDiscounts = { ...applied.discounts, discount2: { min: 0, max: 100 } };
                 setSelections(prev => ({ ...prev, discounts: newDiscounts }));
                 setApplied(prev => ({ ...prev, discounts: newDiscounts }));
-                onApply && onApply(buildQueryString({ ...applied, discounts: newDiscounts }));
+                onApply && onApply(buildQueryString({ ...applied, discounts: newDiscounts }, filterConfig));
               }}
             >
               Segunda Praça: {val2.min}% – {val2.max}%
+            </Chip>
+          );
+        }
+      }
+
+      // Chips para localização
+      if (key === "location" && val) {
+        const stateVal = val.state;
+        const cityVal = val.city;
+        const locationConfig = filterConfig.find(f => f.key === "location");
+        if (stateVal) {
+          const stateObj = locationConfig?.options?.find((s: any) => s.value === stateVal);
+          chips.push(
+            <Chip key="location-state" onClose={() => {
+              // Limpa só o estado e cidade
+              setSelections(prev => ({ ...prev, location: { state: "", city: "" } }));
+              setApplied(prev => ({ ...prev, location: { state: "", city: "" } }));
+              onApply && onApply(buildQueryString({ ...applied, location: { state: "", city: "" } }, filterConfig));
+            }}>
+              Estado: {stateObj ? stateObj.label : stateVal}
+            </Chip>
+          );
+        }
+        if (cityVal && stateVal) {
+          const stateObj = locationConfig?.options?.find((s: any) => s.value === stateVal);
+          const cityObj = stateObj?.cities?.find((c: any) => c.value === cityVal);
+          chips.push(
+            <Chip key="location-city" onClose={() => {
+              // Limpa só a cidade
+              setSelections(prev => ({ ...prev, location: { ...prev.location, city: "" } }));
+              setApplied(prev => ({ ...prev, location: { ...prev.location, city: "" } }));
+              onApply && onApply(buildQueryString({ ...applied, location: { ...applied.location, city: "" } }, filterConfig));
+            }}>
+              Cidade: {cityObj ? cityObj.label : cityVal}
             </Chip>
           );
         }
@@ -390,81 +367,81 @@ const FilterBar: React.FC<{ onApply?: (qs: string) => void; initialSelections?: 
         >
           <PopoverTrigger>
             <Button variant="solid" aria-haspopup="dialog" color="primary">
-              Filtrar
-            </Button>
+          Filtrar
+        </Button>
           </PopoverTrigger>
           <PopoverContent className="rounded bg-white p-4 shadow-md w-full max-w-full sm:max-w-2xl mx-auto">
-            <Tabs
-              selectedKey={activeTab}
-              onSelectionChange={(key) => setActiveTab(key as FilterKey)}
+          <Tabs
+            selectedKey={activeTab}
+            onSelectionChange={(key) => setActiveTab(key as FilterKey)}
               isVertical={window.innerWidth >= 640}
               classNames={window.innerWidth >= 640 ? { panel: 'w-[360px] max-w-full' } : {}}
-            >
-              {filterConfig.map((cfg) => (
+          >
+            {filterConfig.map((cfg) => (
                 <Tab key={cfg.key} title={cfg.description}>
                   <div className="p-4">
                     <div className="font-semibold text-base mb-3">{cfg.title}</div>
-                    {/* aqui vai o conteúdo de cada aba: RadioGroup, CheckboxGroup, Slider, Select */}
-                    {cfg.type === "radio" && (
-                      <RadioGroup
-                        defaultValue={cfg?.defaultValue}
-                        value={selections[cfg.key]}
-                        onValueChange={(val) =>
-                          setSelections((prev) => ({ ...prev, [cfg.key]: val }))
-                        }
-                      >
-                        {cfg.options!.map((opt) => (
+                {/* aqui vai o conteúdo de cada aba: RadioGroup, CheckboxGroup, Slider, Select */}
+                {cfg.type === "radio" && (
+                  <RadioGroup
+                    defaultValue={cfg?.defaultValue}
+                    value={selections[cfg.key]}
+                    onValueChange={(val) =>
+                      setSelections((prev) => ({ ...prev, [cfg.key]: val }))
+                    }
+                  >
+                    {cfg.options!.map((opt: any) => (
                           <Radio key={opt.value} value={opt.value}>{opt.label}</Radio>
-                        ))}
-                      </RadioGroup>
-                    )}
+                    ))}
+                  </RadioGroup>
+                )}
 
-                    {cfg.type === "checkbox" && (
-                      <CheckboxGroup
-                        value={selections[cfg.key]}
-                        onChange={(vals) =>
-                          setSelections((prev) => ({ ...prev, [cfg.key]: vals }))
-                        }
-                      >
-                        {cfg.options!.map((opt) => (
-                          <Checkbox value={opt.value} key={opt.value}>{opt.label}</Checkbox>
-                        ))}
-                      </CheckboxGroup>
-                    )}
+                {cfg.type === "checkbox" && (
+                  <CheckboxGroup
+                    value={selections[cfg.key]}
+                    onChange={(vals) =>
+                      setSelections((prev) => ({ ...prev, [cfg.key]: vals }))
+                    }
+                  >
+                    {cfg.options!.map((opt: any) => (
+                      <Checkbox value={opt.value} key={opt.value}>{opt.label}</Checkbox>
+                    ))}
+                  </CheckboxGroup>
+                )}
 
-                    {cfg.type === "slider" && (
+                {cfg.type === "slider" && (
                       <div className="w-full">
-                        {cfg.key === "price" && (
+                        {cfg.key === "price" && cfg.slider && (
                           <>
                             <div className="flex justify-between mb-1 text-sm text-gray-600">
                               <span>
-                                {selections.price?.min === cfg.slider?.min
+                                {selections.price?.min === cfg.slider.min
                                   ? "Sem valor mínimo"
                                   : `R$ ${selections.price?.min.toLocaleString()}`}
                               </span>
                               <span>
-                                {selections.price?.max === cfg.slider?.max
+                                {selections.price?.max === cfg.slider.max
                                   ? "Sem limite definido"
                                   : `R$ ${selections.price?.max.toLocaleString()}`}
                               </span>
                             </div>
-                            <Slider
-                              minValue={cfg.slider?.min}
-                              maxValue={cfg.slider?.max}
-                              step={cfg.slider?.step}
+                    <Slider
+                              minValue={cfg.slider.min}
+                              maxValue={cfg.slider.max}
+                              step={cfg.slider.step}
                               value={[selections.price?.min, selections.price?.max]}
-                              onChange={(value) => {
-                                if (Array.isArray(value)) {
-                                  const [min, max] = value;
-                                  setSelections((prev) => ({
-                                    ...prev,
+                      onChange={(value) => {
+                        if (Array.isArray(value)) {
+                          const [min, max] = value;
+                          setSelections((prev) => ({
+                            ...prev,
                                     price: { min, max }
-                                  }));
-                                }
-                              }}
+                          }));
+                        }
+                      }}
                               className="w-full"
-                            />
-                          </>
+                    />
+                  </>
                         )}
                       </div>
                     )}
@@ -552,19 +529,60 @@ const FilterBar: React.FC<{ onApply?: (qs: string) => void; initialSelections?: 
                       </div>
                     )}
 
-                    {/* {cfg.type === "select-pair" && (
-                      <></>
-                    )} */}
+                    {cfg.type === "location" && (
+                      <div className="w-full space-y-4">
+                        {/* Estado */}
+                        <div>
+                          <label className="block mb-1 text-sm font-medium text-gray-700">Estado</label>
+                          <select
+                            className="w-full border rounded px-2 py-1"
+                            value={selections.location?.state || ""}
+                            onChange={e => {
+                              setSelections(prev => ({
+                                ...prev,
+                                location: { state: e.target.value, city: "" }
+                              }));
+                            }}
+                          >
+                            <option value="">Selecione o estado</option>
+                            {cfg.options && cfg.options.map((state: any) => (
+                              <option key={state.value} value={state.value}>{state.label}</option>
+                            ))}
+                          </select>
+                        </div>
+                        {/* Cidade */}
+                        <div>
+                          <label className="block mb-1 text-sm font-medium text-gray-700">Cidade</label>
+                          <select
+                            className="w-full border rounded px-2 py-1"
+                            value={selections.location?.city || ""}
+                            onChange={e => {
+                              setSelections(prev => ({
+                                ...prev,
+                                location: { ...prev.location, city: e.target.value }
+                              }));
+                            }}
+                            disabled={!selections.location?.state}
+                          >
+                            <option value="">Selecione a cidade</option>
+                            {cfg.options && selections.location?.state &&
+                              cfg.options.find((state: any) => state.value === selections.location.state)?.cities?.map((city: any) => (
+                                <option key={city.value} value={city.value}>{city.label}</option>
+                              ))}
+                          </select>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                </Tab>
-              ))}
-            </Tabs>
+              </Tab>
+            ))}
+          </Tabs>
             <div className="mt-4 flex flex-col sm:flex-row justify-end gap-2">
               <Button variant="ghost" onPress={clearAll}>
-                Limpar
-              </Button>
+              Limpar
+            </Button>
               <Button onPress={applyFilters} color="primary">Filtrar</Button>
-            </div>
+          </div>
           </PopoverContent>
         </Popover>
         <div className="flex flex-wrap gap-2 flex-1 border border-gray-200 rounded-md px-2 py-1 bg-white/50">
