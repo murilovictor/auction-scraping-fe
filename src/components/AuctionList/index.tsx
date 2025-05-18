@@ -24,6 +24,8 @@ type Property = {
   state?: string;
   neighborhood?: string;
   isFavorite?: boolean;
+  propertyName?: string;
+  propertyLink?: string;
 };
 
 export default function PropertiesList() {
@@ -162,6 +164,15 @@ export default function PropertiesList() {
       )}
       <div className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
         {properties.map((item: Property) => {
+          const today = new Date();
+          today.setHours(0,0,0,0);
+          // Primeiro Leilão
+          const firstDate = item.firstSaleDate ? new Date(item.firstSaleDate) : null;
+          const firstPassed = firstDate && firstDate < today;
+          // Segundo Leilão
+          const secondDate = item.secondSaleDate ? new Date(item.secondSaleDate) : null;
+          const secondPassed = secondDate && secondDate < today;
+          
           const isFavorite = favorites[item.id] !== undefined ? favorites[item.id] : !!item.isFavorite;
           return (
             <Card key={item.id} className="flex flex-col">
@@ -198,6 +209,15 @@ export default function PropertiesList() {
                 )}
               </div>
               <div className="flex-1 flex flex-col gap-2 p-4">
+                {/* Nome do imóvel */}
+                {item.propertyName && (
+                  <div className="text-base font-semibold text-gray-800 mb-1 truncate" title={item.propertyName}>
+                    {item.propertyName}
+                  </div>
+                )}
+
+                <div className="border-t border-gray-200 my-0" />
+
                 {/* Preço de avaliação */}
                 <div className="flex items-center gap-2 mb-1">
                   <span className="text-[16px] text-gray-500 font-semibold">Avaliação:</span>
@@ -210,7 +230,9 @@ export default function PropertiesList() {
                 <div>
                   <div className="text-xs text-gray-500 font-semibold mb-1">Primeiro Leilão</div>
                   <div className="flex items-center gap-2">
-                    <span className="text-primary text-lg font-bold">{formatCurrency(item.firstSalePrice)}</span>
+                    <span className={firstPassed ? "text-gray-400 line-through text-base font-bold" : "text-primary text-lg font-bold"}>
+                      {formatCurrency(item.firstSalePrice)}
+                    </span>
                     {item.firstSaleDiscountPercent !== undefined && (
                       <span className="text-green-600 text-xs font-semibold bg-green-100 rounded px-2 py-0.5">
                         {formatPercent(Number(item.firstSaleDiscountPercent) / 100)}
@@ -228,7 +250,9 @@ export default function PropertiesList() {
                 <div>
                   <div className="text-xs text-gray-500 font-semibold mb-1">Segundo Leilão</div>
                   <div className="flex items-center gap-2">
-                    <span className="text-primary text-lg font-bold">{formatCurrency(item.secondSalePrice)}</span>
+                    <span className={secondPassed ? "text-gray-400 line-through text-base font-bold" : "text-primary text-lg font-bold"}>
+                      {formatCurrency(item.secondSalePrice)}
+                    </span>
                     {item.secondSaleDiscountPercent !== undefined && (
                       <span className="text-green-600 text-xs font-semibold bg-green-100 rounded px-2 py-0.5">
                         {formatPercent(Number(item.secondSaleDiscountPercent) / 100)}
@@ -246,6 +270,17 @@ export default function PropertiesList() {
                 <div className="text-xs text-gray-500 mt-2 font-semibold">
                   {item.city} - {item.state} {item.neighborhood && `- ${item.neighborhood}`}
                 </div>
+                {/* Link para o site do leiloeiro */}
+                {item.propertyLink && (
+                  <a
+                    href={item.propertyLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block mt-2 text-primary underline text-xs font-semibold hover:text-primary/80 transition-colors"
+                  >
+                    Ver no site do leiloeiro
+                  </a>
+                )}
               </div>
             </Card>
           );
