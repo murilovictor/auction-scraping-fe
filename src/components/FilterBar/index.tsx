@@ -166,7 +166,7 @@ const FilterBar: React.FC<{ onApply?: (qs: string) => void; initialSelections?: 
 
   // Carrega os filtros do backend
   useEffect(() => {
-    fetch("http://localhost:3009/api/properties/filters")
+    fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/properties/filters`)
       .then(res => res.json())
       .then((data) => {
         setFilterConfig(data);

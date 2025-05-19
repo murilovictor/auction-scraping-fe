@@ -8,7 +8,7 @@ import { Card } from "@heroui/card";
 import { Pagination } from "@heroui/pagination";
 import { useSession } from "next-auth/react";
 
-const PAGE_SIZE = 12;
+const PAGE_SIZE = 30;
 
 type Property = {
   id: string | number;
@@ -45,7 +45,7 @@ export default function PropertiesList() {
     const fetchData = async () => {
       setIsLoading(true);
       try {
-        const res = await fetch(`http://localhost:3009/api/properties?page=${page}&limit=${PAGE_SIZE}&${filterQuery}`, {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/properties?page=${page}&limit=${PAGE_SIZE}&${filterQuery}`, {
           headers: {
             'x-user-id': userId,
           },
@@ -110,7 +110,7 @@ export default function PropertiesList() {
   const handleToggleFavorite = (propertyId: string | number, current: boolean) => {
     setFavorites(prev => {
       const novo = !current;
-      const url = 'http://localhost:3009/api/favorites';
+      const url = `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/favorites`;
       const payload = {
         userId,
         propertyId,
