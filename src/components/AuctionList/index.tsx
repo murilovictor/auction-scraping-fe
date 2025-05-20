@@ -39,6 +39,28 @@ export default function PropertiesList() {
   const [favorites, setFavorites] = useState<{ [id: string]: boolean }>({});
   const { data: session } = useSession();
   const userId = (session?.user as any)?.id || 'anon';
+  const [filterConfig, setFilterConfig] = useState<any>(null);
+
+  useEffect(() => {
+    // Carrega os filtros do backend
+    fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/properties/filters`)
+      .then(res => res.json())
+      .then((data) => {
+        setFilterConfig(data);
+      });
+  }, []);
+
+  useEffect(() => {
+    if (!filterConfig) return;
+    const qs = window.location.search.replace(/^\?/, "");
+    setFilterQuery(qs);
+    if (!qs) {
+      const defaults = getInitialSelections(filterConfig);
+      const defaultQs = buildQueryString(defaults, filterConfig);
+      setFilterQuery(defaultQs);
+      router.replace(`${window.location.pathname}${defaultQs ? `?${defaultQs}` : ""}`, { scroll: false });
+    }
+  }, [router, filterConfig]);
 
   useEffect(() => {
     let cancelled = false;
@@ -79,18 +101,6 @@ export default function PropertiesList() {
     setPage(1);
     router.replace(`${window.location.pathname}${qs ? `?${qs}` : ""}`, { scroll: false });
   };
-
-  useEffect(() => {
-    const qs = window.location.search.replace(/^\?/, "");
-    setFilterQuery(qs);
-    if (!qs) {
-      const defaults = getInitialSelections();
-      const defaultQs = buildQueryString(defaults);
-      setFilterQuery(defaultQs);
-      router.replace(`${window.location.pathname}${defaultQs ? `?${defaultQs}` : ""}`, { scroll: false });
-    }
-    // eslint-disable-next-line
-  }, []);
 
   const formatCurrency = (value: number) =>
     new Intl.NumberFormat("pt-BR", {
