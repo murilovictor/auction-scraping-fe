@@ -17,6 +17,7 @@ type Property = {
   secondSalePrice: number;
   appraisalValue: number;
   firstSaleDate?: string;
+  type?: string;
   secondSaleDate?: string;
   firstSaleDiscountPercent?: number;
   secondSaleDiscountPercent?: number;
@@ -27,6 +28,8 @@ type Property = {
   isFavorite?: boolean;
   propertyName?: string;
   propertyLink?: string;
+  auctioneerName?: string;
+  auctionLink?: string;
 };
 
 export default function PropertiesList() {
@@ -176,147 +179,184 @@ export default function PropertiesList() {
           />
         </div>
       )}
-      <div className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
-        {properties.map((item: Property) => {
-          const today = new Date();
-          today.setHours(0,0,0,0);
-          // Primeiro Leilão
-          const firstDate = item.firstSaleDate ? new Date(item.firstSaleDate) : null;
-          const firstPassed = firstDate && firstDate < today;
-          // Segundo Leilão
-          const secondDate = item.secondSaleDate ? new Date(item.secondSaleDate) : null;
-          const secondPassed = secondDate && secondDate < today;
-          
-          const isFavorite = favorites[item.id] !== undefined ? favorites[item.id] : !!item.isFavorite;
-          return (
-            <Card key={item.id} className="flex flex-col">
-              <div className="relative w-full aspect-video bg-gray-100 flex items-center justify-center overflow-hidden rounded-t">
-                {/* Botão de favorito */}
-                <button
-                  aria-label="Favoritar"
-                  className="absolute z-[1] right-1.5 p-2 bg-gray-50 hover:bg-gray-200 rounded-md transition-colors top-1.5"
-                  onClick={e => {
-                    e.stopPropagation();
-                    handleToggleFavorite(item.id, isFavorite);
-                  }}
-                  aria-pressed={isFavorite}
-                  title={isFavorite ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
-                  data-state={isFavorite ? 'open' : 'closed'}
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill={isFavorite ? 'currentColor' : 'none'}
-                    viewBox="0 0 24 24"
-                    strokeWidth={1.5}
-                    stroke="currentColor"
-                    aria-hidden="true"
-                    data-slot="icon"
-                    className={`w-5 h-5 ${isFavorite ? 'text-red-500 fill-current' : 'text-gray-400'}`}
+      <div className="relative w-full">
+        {isLoading && (
+          <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-50 flex items-center justify-center">
+            <Spinner size="lg" />
+          </div>
+        )}
+        <div className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
+          {properties.map((item: Property) => {
+            const today = new Date();
+            today.setHours(0,0,0,0);
+            // Primeiro Leilão
+            const firstDate = item.firstSaleDate ? new Date(item.firstSaleDate) : null;
+            const firstPassed = firstDate && firstDate < today;
+            // Segundo Leilão
+            const secondDate = item.secondSaleDate ? new Date(item.secondSaleDate) : null;
+            const secondPassed = secondDate && secondDate < today;
+            
+            const isFavorite = favorites[item.id] !== undefined ? favorites[item.id] : !!item.isFavorite;
+            return (
+              <Card key={item.id} className="flex flex-col">
+                <div className="relative w-full aspect-video bg-gray-100 flex items-center justify-center overflow-hidden rounded-t">
+                  {/* Tipo do imóvel */}
+                  {item.type && (
+                    <div className="absolute z-[1] left-1.5 top-1.5 px-2 py-1 bg-primary/90 text-white text-xs font-semibold rounded-md">
+                      {item.type}
+                    </div>
+                  )}
+                  {/* Botão de favorito */}
+                  <button
+                    aria-label="Favoritar"
+                    className="absolute z-[1] right-1.5 p-2 bg-gray-50 hover:bg-gray-200 rounded-md transition-colors top-1.5"
+                    onClick={e => {
+                      e.stopPropagation();
+                      handleToggleFavorite(item.id, isFavorite);
+                    }}
+                    aria-pressed={isFavorite}
+                    title={isFavorite ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
+                    data-state={isFavorite ? 'open' : 'closed'}
                   >
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z" />
-                  </svg>
-                </button>
-                {item.photo ? (
-                  <img src={item.photo} alt="Foto do imóvel" className="object-cover w-full h-full" />
-                ) : (
-                  <div className="text-gray-400">Sem foto</div>
-                )}
-              </div>
-              <div className="flex-1 flex flex-col gap-2 p-4">
-                {/* Nome do imóvel */}
-                {item.propertyName && (
-                  <div className="text-base font-semibold text-gray-800 mb-1 truncate" title={item.propertyName}>
-                    {item.propertyName}
-                  </div>
-                )}
-
-                <div className="border-t border-gray-200 my-0" />
-
-                {/* Preço de avaliação */}
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-[16px] text-gray-500 font-semibold">Avaliação:</span>
-                  <span className="text-[16px] text-gray-400 line-through">{formatCurrency(item.appraisalValue)}</span>
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill={isFavorite ? 'currentColor' : 'none'}
+                      viewBox="0 0 24 24"
+                      strokeWidth={1.5}
+                      stroke="currentColor"
+                      aria-hidden="true"
+                      data-slot="icon"
+                      className={`w-5 h-5 ${isFavorite ? 'text-red-500 fill-current' : 'text-gray-400'}`}
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z" />
+                    </svg>
+                  </button>
+                  {item.photo ? (
+                    <img src={item.photo} alt="Foto do imóvel" className="object-cover w-full h-full" />
+                  ) : (
+                    <div className="text-gray-400">Sem foto</div>
+                  )}
                 </div>
+                <div className="flex-1 flex flex-col gap-2 p-4">
+                  {/* Nome do imóvel */}
+                  {item.propertyName && (
+                    <div className="text-base font-semibold text-gray-800 mb-1 truncate" title={item.propertyName}>
+                      {item.propertyName}
+                    </div>
+                  )}
 
-                <div className="border-t border-gray-200 my-0" />
+                  <div className="border-t border-gray-200 my-0" />
 
-                {/* Primeiro Leilão */}
-                <div>
-                  <div className="text-xs text-gray-500 font-semibold mb-1">Primeiro Leilão</div>
-                  <div className="flex items-center gap-2">
-                    <span className={firstPassed ? "text-gray-400 line-through text-base font-bold" : "text-primary text-lg font-bold"}>
-                      {formatCurrency(item.firstSalePrice)}
-                    </span>
-                    {item.firstSaleDiscountPercent !== undefined && (
-                      <span className="text-green-600 text-xs font-semibold bg-green-100 rounded px-2 py-0.5">
-                        {formatPercent(Number(item.firstSaleDiscountPercent) / 100)}
+                  {/* Preço de avaliação */}
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-[16px] text-gray-500 font-semibold">Avaliação:</span>
+                    <span className="text-[16px] text-gray-400 line-through">{formatCurrency(item.appraisalValue)}</span>
+                  </div>
+
+                  <div className="border-t border-gray-200 my-0" />
+
+                  {/* Primeiro Leilão */}
+                  <div>
+                    <div className="text-xs text-gray-500 font-semibold mb-1">Primeiro Leilão</div>
+                    <div className="flex items-center gap-2">
+                      <span className={firstPassed ? "text-gray-400 line-through text-base font-bold" : "text-primary text-lg font-bold"}>
+                        {formatCurrency(item.firstSalePrice)}
                       </span>
+                      {item.firstSaleDiscountPercent !== undefined && (
+                        <span className="text-green-600 text-xs font-semibold bg-green-100 rounded px-2 py-0.5">
+                          {formatPercent(Number(item.firstSaleDiscountPercent) / 100)}
+                        </span>
+                      )}
+                    </div>
+
+                    {item.firstSaleDate && (
+                      <div className="text-xs text-gray-500">
+                        Data: {item.firstSaleDate ? new Date(item.firstSaleDate).toLocaleDateString("pt-BR") : "-"}
+                      </div>
+                    )}
+
+                  </div>
+
+                  <div className="border-t border-gray-200 my-0" />
+
+                  {/* Segundo Leilão */}
+                  {item.secondSalePrice && (
+                    <div>
+                      <div>
+                        <div className="text-xs text-gray-500 font-semibold mb-1">Segundo Leilão</div>
+                        <div className="flex items-center gap-2">
+                          <span className={secondPassed ? "text-gray-400 line-through text-base font-bold" : "text-primary text-lg font-bold"}>
+                            {formatCurrency(item.secondSalePrice)}
+                          </span>
+                          {item.secondSaleDiscountPercent !== undefined && (
+                            <span className="text-green-600 text-xs font-semibold bg-green-100 rounded px-2 py-0.5">
+                              {formatPercent(Number(item.secondSaleDiscountPercent) / 100)}
+                            </span>
+                          )}
+                        </div>
+
+                        {item.secondSaleDate && (
+                          <div className="text-xs text-gray-500">
+                            Data: {item.secondSaleDate ? new Date(item.secondSaleDate).toLocaleDateString("pt-BR") : "-"}
+                          </div>
+                        )}
+                      </div>
+                      <div className="border-t border-gray-200 my-0" />
+                    </div>
+                  )}
+
+                  {/* Localização */}
+                  {/* <div className="text-xs text-gray-500 mt-2 font-semibold">
+                    {item.city} - {item.state} {item.neighborhood && `- ${item.neighborhood}`}
+                  </div> */}
+
+                  {item.address && (
+                    <a
+                      href={`https://www.google.com/search?q=${encodeURIComponent(item.address)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-gray-500 mt-1 font-semibold underline hover:text-primary transition-colors"
+                      title="Buscar endereço no Google"
+                    >
+                      {item.address}
+                    </a>
+                  )}
+                  {/* Links */}
+                  <div className="flex flex-col gap-1 mt-2">
+                    {item.propertyLink && (
+                      <div className="flex items-center gap-1">
+                        <span className="text-xs text-gray-500">Caixa:</span>
+                        <a
+                          href={item.propertyLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-primary underline text-xs font-semibold hover:text-primary/80 transition-colors"
+                        >
+                          Ver imóvel
+                        </a>
+                      </div>
+                    )}
+
+                    {item.auctioneerName && (
+                      <div className="flex items-center gap-1">
+                        <span className="text-xs text-gray-500">Leiloeiro:</span>
+                        <a
+                          href={item.auctionLink?.replace("www.", "https://")}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-primary underline text-xs font-semibold hover:text-primary/80 transition-colors"
+                        >
+                          {item.auctioneerName}
+                        </a>
+                      </div>
                     )}
                   </div>
-                  <div className="text-xs text-gray-500">
-                    Data: {item.firstSaleDate ? new Date(item.firstSaleDate).toLocaleDateString("pt-BR") : "-"}
-                  </div>
                 </div>
-
-                <div className="border-t border-gray-200 my-0" />
-
-                {/* Segundo Leilão */}
-                <div>
-                  <div className="text-xs text-gray-500 font-semibold mb-1">Segundo Leilão</div>
-                  <div className="flex items-center gap-2">
-                    <span className={secondPassed ? "text-gray-400 line-through text-base font-bold" : "text-primary text-lg font-bold"}>
-                      {formatCurrency(item.secondSalePrice)}
-                    </span>
-                    {item.secondSaleDiscountPercent !== undefined && (
-                      <span className="text-green-600 text-xs font-semibold bg-green-100 rounded px-2 py-0.5">
-                        {formatPercent(Number(item.secondSaleDiscountPercent) / 100)}
-                      </span>
-                    )}
-                  </div>
-                  <div className="text-xs text-gray-500">
-                    Data: {item.secondSaleDate ? new Date(item.secondSaleDate).toLocaleDateString("pt-BR") : "-"}
-                  </div>
-                </div>
-
-                <div className="border-t border-gray-200 my-0" />
-
-                {/* Localização */}
-                {/* <div className="text-xs text-gray-500 mt-2 font-semibold">
-                  {item.city} - {item.state} {item.neighborhood && `- ${item.neighborhood}`}
-                </div> */}
-
-                {item.address && (
-                  <a
-                    href={`https://www.google.com/search?q=${encodeURIComponent(item.address)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs text-gray-500 mt-1 font-semibold underline hover:text-primary transition-colors"
-                    title="Buscar endereço no Google"
-                  >
-                    {item.address}
-                  </a>
-                )}
-                {/* Link para o site do leiloeiro */}
-                {item.propertyLink && (
-                  <a
-                    href={item.propertyLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="block mt-2 text-primary underline text-xs font-semibold hover:text-primary/80 transition-colors"
-                  >
-                    Ver no site do leiloeiro
-                  </a>
-                )}
-              </div>
-            </Card>
-          );
-        })}
-      </div>
-      {isLoading && (
-        <div className="flex justify-center items-center min-h-[100px]">
-          <Spinner />
+              </Card>
+            );
+          })}
         </div>
-      )}
+      </div>
       {!isLoading && properties.length === 0 && (
         <div className="text-center text-gray-500 py-12">Nenhum imóvel encontrado.</div>
       )}
