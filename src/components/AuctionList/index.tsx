@@ -161,11 +161,11 @@ export default function PropertiesList() {
 
   return (
     <div className="w-full p-6 min-h-[80vh]">
-      <div className="sticky z-10 bg-white pb-2 top-20">
+      <div className="bg-white mb-6">
         <FilterBar onApply={handleApply} initialQueryString={filterQuery} />
       </div>
       <div className="w-full text-sm text-gray-700 font-semibold mb-2 px-2">
-        {total} imóvel{total === 1 ? '' : 'es'} encontrado{total === 1 ? '' : 's'}
+        {total} {total === 1 ? 'imóvel' : 'imóveis'} encontrado{total === 1 ? '' : 's'}
       </div>
       {totalPages > 1 && (
         <div className="flex justify-center mt-12">
