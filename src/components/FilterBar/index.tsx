@@ -1,9 +1,16 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Button, Chip, Slider, Tab, Tabs, Popover, PopoverTrigger, PopoverContent } from "@heroui/react";
+import { Button, Chip, Slider } from "@heroui/react";
 import { Radio, RadioGroup } from "@heroui/radio";
 import { Checkbox, CheckboxGroup } from "@heroui/checkbox";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerBody,
+  DrawerFooter
+} from "@heroui/drawer";
 
 // Configuração inicial dos filtros
 type SortOption = { value: string; label: string; sortField: string; sortOrder: 'asc' | 'desc' };
@@ -160,7 +167,6 @@ const FilterBar: React.FC<{ onApply?: (qs: string) => void; initialSelections?: 
 }) => {
   const [filterConfig, setFilterConfig] = useState<FilterConfig | null>(null);
   const [isOpen, setIsOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<FilterKey>("sort");
   const [selections, setSelections] = useState<Selections>({});
   const [applied, setApplied] = useState<Selections>({});
 
@@ -205,23 +211,12 @@ const FilterBar: React.FC<{ onApply?: (qs: string) => void; initialSelections?: 
     return <div className="p-4 text-center text-gray-500">Carregando filtros...</div>;
   }
 
-  // abre/fecha painel
-  const togglePanel = () => setIsOpen((open) => !open);
-
   // limpa todos filtros
   const clearAll = () => {
     const initial = getInitialSelections(filterConfig);
     setSelections(initial);
     setApplied(initial);
     onApply && onApply(buildQueryString(initial, filterConfig));
-  };
-
-  // limpa apenas a aba ativa
-  const clearTab = () => {
-    setSelections((prev) => ({
-      ...prev,
-      [activeTab]: filterConfig.find((f) => f.key === activeTab)!.defaultValue,
-    }));
   };
 
   // limpa filtro individual
@@ -254,7 +249,11 @@ const FilterBar: React.FC<{ onApply?: (qs: string) => void; initialSelections?: 
 
       if (key === "price") {
         chips.push(
-          <Chip key={key} onClose={() => clearFilter(key)}>
+          <Chip 
+            key={key} 
+            onClose={() => clearFilter(key)}
+            className="text-sm"
+          >
             Preço: R$ {val.min.toLocaleString()} – R$ {val.max.toLocaleString()}
           </Chip>,
         );
@@ -268,7 +267,11 @@ const FilterBar: React.FC<{ onApply?: (qs: string) => void; initialSelections?: 
           })
           .join(", ");
         chips.push(
-          <Chip key={key} onClose={() => clearFilter(key)}>
+          <Chip 
+            key={key} 
+            onClose={() => clearFilter(key)}
+            className="text-sm"
+          >
             {config.label}: {labels}
           </Chip>
         );
@@ -277,7 +280,11 @@ const FilterBar: React.FC<{ onApply?: (qs: string) => void; initialSelections?: 
         const opt = config?.options && config?.options?.find((o: any) => o.value === val);
         if (opt) {
           chips.push(
-            <Chip key={key} onClose={() => clearFilter(key)}>
+            <Chip 
+              key={key} 
+              onClose={() => clearFilter(key)}
+              className="text-sm"
+            >
               {config.label}: {opt.label}
             </Chip>
           );
@@ -298,6 +305,7 @@ const FilterBar: React.FC<{ onApply?: (qs: string) => void; initialSelections?: 
                 setApplied(prev => ({ ...prev, discounts: newDiscounts }));
                 onApply && onApply(buildQueryString({ ...applied, discounts: newDiscounts }, filterConfig));
               }}
+              className="text-sm"
             >
               Primeira Praça: {val1.min}% – {val1.max}%
             </Chip>
@@ -313,6 +321,7 @@ const FilterBar: React.FC<{ onApply?: (qs: string) => void; initialSelections?: 
                 setApplied(prev => ({ ...prev, discounts: newDiscounts }));
                 onApply && onApply(buildQueryString({ ...applied, discounts: newDiscounts }, filterConfig));
               }}
+              className="text-sm"
             >
               Segunda Praça: {val2.min}% – {val2.max}%
             </Chip>
@@ -328,12 +337,15 @@ const FilterBar: React.FC<{ onApply?: (qs: string) => void; initialSelections?: 
         if (stateVal) {
           const stateObj = locationConfig?.options?.find((s: any) => s.value === stateVal);
           chips.push(
-            <Chip key="location-state" onClose={() => {
-              // Limpa só o estado e cidade
-              setSelections(prev => ({ ...prev, location: { state: "", city: "" } }));
-              setApplied(prev => ({ ...prev, location: { state: "", city: "" } }));
-              onApply && onApply(buildQueryString({ ...applied, location: { state: "", city: "" } }, filterConfig));
-            }}>
+            <Chip 
+              key="location-state" 
+              onClose={() => {
+                setSelections(prev => ({ ...prev, location: { state: "", city: "" } }));
+                setApplied(prev => ({ ...prev, location: { state: "", city: "" } }));
+                onApply && onApply(buildQueryString({ ...applied, location: { state: "", city: "" } }, filterConfig));
+              }}
+              className="text-sm"
+            >
               Estado: {stateObj ? stateObj.label : stateVal}
             </Chip>
           );
@@ -342,12 +354,15 @@ const FilterBar: React.FC<{ onApply?: (qs: string) => void; initialSelections?: 
           const stateObj = locationConfig?.options?.find((s: any) => s.value === stateVal);
           const cityObj = stateObj?.cities?.find((c: any) => c.value === cityVal);
           chips.push(
-            <Chip key="location-city" onClose={() => {
-              // Limpa só a cidade
-              setSelections(prev => ({ ...prev, location: { ...prev.location, city: "" } }));
-              setApplied(prev => ({ ...prev, location: { ...prev.location, city: "" } }));
-              onApply && onApply(buildQueryString({ ...applied, location: { ...applied.location, city: "" } }, filterConfig));
-            }}>
+            <Chip 
+              key="location-city" 
+              onClose={() => {
+                setSelections(prev => ({ ...prev, location: { ...prev.location, city: "" } }));
+                setApplied(prev => ({ ...prev, location: { ...prev.location, city: "" } }));
+                onApply && onApply(buildQueryString({ ...applied, location: { ...applied.location, city: "" } }, filterConfig));
+              }}
+              className="text-sm"
+            >
               Cidade: {cityObj ? cityObj.label : cityVal}
             </Chip>
           );
@@ -359,57 +374,62 @@ const FilterBar: React.FC<{ onApply?: (qs: string) => void; initialSelections?: 
 
   return (
     <div className="w-full">
-      <div className="mb-1 flex flex-wrap items-center gap-1 sm:flex-row flex-col">
-        <Popover
-          placement="bottom-start"
+      <div className="mb-1 flex flex-wrap items-center gap-2 sm:gap-1">
+        <Button 
+          variant="solid" 
+          color="primary" 
+          className="w-full sm:w-auto"
+          onPress={() => setIsOpen(true)}
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24"><path fill="currentColor" d="M3 4.5A1.5 1.5 0 0 1 4.5 3h15A1.5 1.5 0 0 1 21 4.5v15a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 19.5v-15ZM4.5 5a.5.5 0 0 0-.5.5v13a.5.5 0 0 0 .5.5h15a.5.5 0 0 0 .5-.5v-13a.5.5 0 0 0-.5-.5h-15ZM7 8.75a.75.75 0 0 1 .75-.75h8.5a.75.75 0 0 1 0 1.5h-8.5A.75.75 0 0 1 7 8.75Zm.75 2.75a.75.75 0 0 0 0 1.5h8.5a.75.75 0 0 0 0-1.5h-8.5ZM7 15.25a.75.75 0 0 1 .75-.75h4.5a.75.75 0 0 1 0 1.5h-4.5a.75.75 0 0 1-.75-.75Z"/></svg>
+          Filtros
+        </Button>
+
+        <Drawer
           isOpen={isOpen}
           onOpenChange={setIsOpen}
+          placement="right"
+          size="sm"
         >
-          <PopoverTrigger>
-            <Button variant="solid" aria-haspopup="dialog" color="primary">
-          Filtrar
-        </Button>
-          </PopoverTrigger>
-          <PopoverContent className="rounded bg-white p-4 shadow-md w-full max-w-full sm:max-w-2xl mx-auto">
-          <Tabs
-            selectedKey={activeTab}
-            onSelectionChange={(key) => setActiveTab(key as FilterKey)}
-              isVertical={window.innerWidth >= 640}
-              classNames={window.innerWidth >= 640 ? { panel: 'w-[360px] max-w-full' } : {}}
-          >
-            {filterConfig.map((cfg) => (
-                <Tab key={cfg.key} title={cfg.description}>
-                  <div className="p-4">
-                    <div className="font-semibold text-base mb-3">{cfg.title}</div>
-                {/* aqui vai o conteúdo de cada aba: RadioGroup, CheckboxGroup, Slider, Select */}
-                {cfg.type === "radio" && (
-                  <RadioGroup
-                    defaultValue={cfg?.defaultValue}
-                    value={selections[cfg.key]}
-                    onValueChange={(val) =>
-                      setSelections((prev) => ({ ...prev, [cfg.key]: val }))
-                    }
-                  >
-                    {cfg.options!.map((opt: any) => (
+          <DrawerContent>
+            <DrawerHeader>
+              <h2 className="text-lg font-semibold">Filtros</h2>
+            </DrawerHeader>
+            <DrawerBody>
+              <div className="space-y-6">
+                {filterConfig.map((cfg) => (
+                  <div key={cfg.key} className="border-b last:border-0 pb-4 last:pb-0">
+                    <div className="font-medium mb-3">{cfg.title}</div>
+                    {cfg.type === "radio" && (
+                      <RadioGroup
+                        defaultValue={cfg?.defaultValue}
+                        value={selections[cfg.key]}
+                        onValueChange={(val) =>
+                          setSelections((prev) => ({ ...prev, [cfg.key]: val }))
+                        }
+                        className="flex flex-col gap-2"
+                      >
+                        {cfg.options!.map((opt: any) => (
                           <Radio key={opt.value} value={opt.value}>{opt.label}</Radio>
-                    ))}
-                  </RadioGroup>
-                )}
+                        ))}
+                      </RadioGroup>
+                    )}
 
-                {cfg.type === "checkbox" && (
-                  <CheckboxGroup
-                    value={selections[cfg.key]}
-                    onChange={(vals) =>
-                      setSelections((prev) => ({ ...prev, [cfg.key]: vals }))
-                    }
-                  >
-                    {cfg.options!.map((opt: any) => (
-                      <Checkbox value={opt.value} key={opt.value}>{opt.label}</Checkbox>
-                    ))}
-                  </CheckboxGroup>
-                )}
+                    {cfg.type === "checkbox" && (
+                      <CheckboxGroup
+                        value={selections[cfg.key]}
+                        onChange={(vals) =>
+                          setSelections((prev) => ({ ...prev, [cfg.key]: vals }))
+                        }
+                        className="flex flex-col gap-2"
+                      >
+                        {cfg.options!.map((opt: any) => (
+                          <Checkbox value={opt.value} key={opt.value}>{opt.label}</Checkbox>
+                        ))}
+                      </CheckboxGroup>
+                    )}
 
-                {cfg.type === "slider" && (
+                    {cfg.type === "slider" && (
                       <div className="w-full">
                         {cfg.key === "price" && cfg.slider && (
                           <>
@@ -425,29 +445,29 @@ const FilterBar: React.FC<{ onApply?: (qs: string) => void; initialSelections?: 
                                   : `R$ ${selections.price?.max.toLocaleString()}`}
                               </span>
                             </div>
-                    <Slider
+                            <Slider
                               minValue={cfg.slider.min}
                               maxValue={cfg.slider.max}
                               step={cfg.slider.step}
                               value={[selections.price?.min, selections.price?.max]}
-                      onChange={(value) => {
-                        if (Array.isArray(value)) {
-                          const [min, max] = value;
-                          setSelections((prev) => ({
-                            ...prev,
+                              onChange={(value) => {
+                                if (Array.isArray(value)) {
+                                  const [min, max] = value;
+                                  setSelections((prev) => ({
+                                    ...prev,
                                     price: { min, max }
-                          }));
-                        }
-                      }}
+                                  }));
+                                }
+                              }}
                               className="w-full"
-                    />
-                  </>
+                            />
+                          </>
                         )}
                       </div>
                     )}
 
                     {cfg.type === "custom" && (
-                      <div className="w-full space-y-6">
+                      <div className="space-y-4">
                         {/* Desconto 1 */}
                         <div>
                           <div className="mb-1 text-sm text-gray-600 font-medium">Primeira Praça</div>
@@ -530,12 +550,12 @@ const FilterBar: React.FC<{ onApply?: (qs: string) => void; initialSelections?: 
                     )}
 
                     {cfg.type === "location" && (
-                      <div className="w-full space-y-4">
+                      <div className="space-y-4">
                         {/* Estado */}
                         <div>
                           <label className="block mb-1 text-sm font-medium text-gray-700">Estado</label>
                           <select
-                            className="w-full border rounded px-2 py-1"
+                            className="w-full border rounded px-2 py-1 text-sm"
                             value={selections.location?.state || ""}
                             onChange={e => {
                               setSelections(prev => ({
@@ -554,7 +574,7 @@ const FilterBar: React.FC<{ onApply?: (qs: string) => void; initialSelections?: 
                         <div>
                           <label className="block mb-1 text-sm font-medium text-gray-700">Cidade</label>
                           <select
-                            className="w-full border rounded px-2 py-1"
+                            className="w-full border rounded px-2 py-1 text-sm"
                             value={selections.location?.city || ""}
                             onChange={e => {
                               setSelections(prev => ({
@@ -574,18 +594,30 @@ const FilterBar: React.FC<{ onApply?: (qs: string) => void; initialSelections?: 
                       </div>
                     )}
                   </div>
-              </Tab>
-            ))}
-          </Tabs>
-            <div className="mt-4 flex flex-col sm:flex-row justify-end gap-2">
-              <Button variant="ghost" onPress={clearAll}>
-              Limpar
-            </Button>
-              <Button onPress={applyFilters} color="primary">Filtrar</Button>
-          </div>
-          </PopoverContent>
-        </Popover>
-        <div className="flex flex-wrap gap-2 flex-1 border border-gray-200 rounded-md px-2 py-1 bg-white/50">
+                ))}
+              </div>
+            </DrawerBody>
+            <DrawerFooter>
+              <div className="flex justify-end gap-2">
+                <Button 
+                  variant="ghost" 
+                  onPress={() => {
+                    clearAll();
+                    setIsOpen(false);
+                  }} 
+                  size="sm"
+                >
+                  Limpar
+                </Button>
+                <Button onPress={applyFilters} color="primary" size="sm">
+                  Aplicar
+                </Button>
+              </div>
+            </DrawerFooter>
+          </DrawerContent>
+        </Drawer>
+
+        <div className="flex flex-wrap gap-1.5 flex-1 border border-gray-200 rounded-md px-2 py-2 bg-white/50 min-h-[40px] overflow-x-auto">
           {renderChips()}
         </div>
         {Object.keys(applied).some((k) => {
@@ -596,7 +628,7 @@ const FilterBar: React.FC<{ onApply?: (qs: string) => void; initialSelections?: 
             variant="ghost"
             aria-label="Limpar filtros"
             onPress={clearAll}
-            className="self-start sm:self-auto flex items-center gap-1"
+            className="w-full sm:w-auto flex items-center justify-center gap-1"
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24"><path fill="currentColor" d="M7 4V2.75A2.75 2.75 0 0 1 9.75 0h4.5A2.75 2.75 0 0 1 17 2.75V4h4.25a.75.75 0 0 1 0 1.5H2.75a.75.75 0 0 1 0-1.5H7Zm1.5-1.25V4h7V2.75a1.25 1.25 0 0 0-1.25-1.25h-4.5A1.25 1.25 0 0 0 8.5 2.75ZM4.25 6.5h15.5l-.8 13.09A3.25 3.25 0 0 1 15.71 22H8.29a3.25 3.25 0 0 1-3.24-2.41L4.25 6.5Zm2.25 2 0 .09.8 13.09c.1.8.79 1.41 1.59 1.41h7.42c.8 0 1.49-.61 1.59-1.41l.8-13.09.01-.09H6.5Zm2.25 2.75a.75.75 0 0 1 .75.75v6.5a.75.75 0 0 1-1.5 0v-6.5a.75.75 0 0 1 .75-.75Zm3.25.75a.75.75 0 0 0-1.5 0v6.5a.75.75 0 0 0 1.5 0v-6.5Zm2.5-.75a.75.75 0 0 1 .75.75v6.5a.75.75 0 0 1-1.5 0v-6.5a.75.75 0 0 1 .75-.75Z"/></svg>
             Limpar filtros
