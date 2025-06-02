@@ -346,7 +346,7 @@ export default function PropertiesList() {
                           rel="noopener noreferrer"
                           className="text-primary underline text-xs font-semibold hover:text-primary/80 transition-colors"
                         >
-                          {item.auctioneerName}
+                          {item.auctionLink}
                         </a>
                       </div>
                     )}
