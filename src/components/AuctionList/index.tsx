@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { Card } from "@heroui/card";
 import { Pagination } from "@heroui/pagination";
 import { useSession } from "next-auth/react";
+import { FaHome, FaCar, FaRuler, FaMapMarkerAlt } from 'react-icons/fa'
 
 const PAGE_SIZE = 30;
 
@@ -30,6 +31,10 @@ type Property = {
   propertyLink?: string;
   auctioneerName?: string;
   auctionLink?: string;
+  privateArea?: number;
+  landArea?: number;
+  rooms?: number;
+  garageSpaces?: number;
 };
 
 export default function PropertiesList() {
@@ -256,36 +261,33 @@ export default function PropertiesList() {
                   <div className="border-t border-gray-200 my-0" />
 
                   {/* Primeiro Leilão */}
-                  <div>
-                    <div className="text-xs text-gray-500 font-semibold mb-1">Primeiro Leilão</div>
-                    <div className="flex items-center gap-2">
-                      <span className={firstPassed ? "text-gray-400 line-through text-base font-bold" : "text-primary text-lg font-bold"}>
-                        {formatCurrency(item.firstSalePrice)}
-                      </span>
-                      {item.firstSaleDiscountPercent !== undefined && (
-                        <span className="text-green-600 text-xs font-semibold bg-green-100 rounded px-2 py-0.5">
-                          {formatPercent(Number(item.firstSaleDiscountPercent) / 100)}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="flex flex-col">
+                      <div className="text-xs text-gray-500 font-semibold mb-1">Primeiro Leilão</div>
+                      <div className="flex flex-wrap items-baseline gap-1 sm:gap-2">
+                        <span className={firstPassed ? "text-gray-400 line-through text-sm font-bold" : "text-primary text-base font-bold"}>
+                          {formatCurrency(item.firstSalePrice)}
                         </span>
+                        {item.firstSaleDiscountPercent !== undefined && (
+                          <span className="text-green-600 text-xs font-semibold bg-green-100 rounded px-2 py-0.5">
+                            {formatPercent(Number(item.firstSaleDiscountPercent) / 100)}
+                          </span>
+                        )}
+                      </div>
+
+                      {item.firstSaleDate && (
+                        <div className="text-xs text-gray-500 mt-1">
+                          Data: {item.firstSaleDate ? new Date(item.firstSaleDate).toLocaleDateString("pt-BR") : "-"}
+                        </div>
                       )}
                     </div>
 
-                    {item.firstSaleDate && (
-                      <div className="text-xs text-gray-500">
-                        Data: {item.firstSaleDate ? new Date(item.firstSaleDate).toLocaleDateString("pt-BR") : "-"}
-                      </div>
-                    )}
-
-                  </div>
-
-                  <div className="border-t border-gray-200 my-0" />
-
-                  {/* Segundo Leilão */}
-                  {item.secondSalePrice && (
-                    <div>
-                      <div>
+                    {/* Segundo Leilão */}
+                    {item.secondSalePrice && (
+                      <div className="flex flex-col">
                         <div className="text-xs text-gray-500 font-semibold mb-1">Segundo Leilão</div>
-                        <div className="flex items-center gap-2">
-                          <span className={secondPassed ? "text-gray-400 line-through text-base font-bold" : "text-primary text-lg font-bold"}>
+                        <div className="flex flex-wrap items-baseline gap-1 sm:gap-2">
+                          <span className={secondPassed ? "text-gray-400 line-through text-sm font-bold" : "text-primary text-base font-bold"}>
                             {formatCurrency(item.secondSalePrice)}
                           </span>
                           {item.secondSaleDiscountPercent !== undefined && (
@@ -296,14 +298,45 @@ export default function PropertiesList() {
                         </div>
 
                         {item.secondSaleDate && (
-                          <div className="text-xs text-gray-500">
+                          <div className="text-xs text-gray-500 mt-1">
                             Data: {item.secondSaleDate ? new Date(item.secondSaleDate).toLocaleDateString("pt-BR") : "-"}
                           </div>
                         )}
                       </div>
-                      <div className="border-t border-gray-200 my-0" />
-                    </div>
-                  )}
+                    )}
+                  </div>
+
+                  <div className="border-t border-gray-200 my-0" />
+
+                  {/* Características do Imóvel */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-2">
+                    {item?.privateArea !== undefined && item.privateArea > 0 && (
+                      <div className="flex items-center gap-1 text-xs text-gray-600">
+                        <FaRuler className="w-3.5 h-3.5" />
+                        <span>{item.privateArea}m²</span>
+                      </div>
+                    )}
+                    {item?.landArea !== undefined && item.landArea > 0 && (
+                      <div className="flex items-center gap-1 text-xs text-gray-600">
+                        <FaMapMarkerAlt className="w-3.5 h-3.5" />
+                        <span>{item.landArea}m²</span>
+                      </div>
+                    )}
+                    {item?.rooms !== undefined && item.rooms > 0 && (
+                      <div className="flex items-center gap-1 text-xs text-gray-600">
+                        <FaHome className="w-3.5 h-3.5" />
+                        <span>{item.rooms} quartos</span>
+                      </div>
+                    )}
+                    {item?.garageSpaces !== undefined && item.garageSpaces > 0 && (
+                      <div className="flex items-center gap-1 text-xs text-gray-600">
+                        <FaCar className="w-3.5 h-3.5" />
+                        <span>{item.garageSpaces} vagas</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="border-t border-gray-200 my-0" />
 
                   {/* Localização */}
                   {/* <div className="text-xs text-gray-500 mt-2 font-semibold">
