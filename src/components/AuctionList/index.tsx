@@ -341,7 +341,7 @@ export default function PropertiesList() {
                       <div className="flex items-center gap-1">
                         <span className="text-xs text-gray-500">Leiloeiro:</span>
                         <a
-                          href={item.auctionLink?.replace("www.", "https://")}
+                          href={item.auctionLink?.toLowerCase()?.replace("www.", "https://")}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="text-primary underline text-xs font-semibold hover:text-primary/80 transition-colors"
