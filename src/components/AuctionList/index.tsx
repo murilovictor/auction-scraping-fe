@@ -29,7 +29,7 @@ type Property = {
   propertyName?: string;
   propertyLink?: string;
   auctioneerName?: string;
-  auctioneerLink?: string;
+  auctionLink?: string;
 };
 
 export default function PropertiesList() {
@@ -341,12 +341,12 @@ export default function PropertiesList() {
                       <div className="flex items-center gap-1">
                         <span className="text-xs text-gray-500">Leiloeiro:</span>
                         <a
-                          href={item.auctioneerLink?.replace("www.", "https://")}
+                          href={item.auctionLink?.replace("www.", "https://")}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="text-primary underline text-xs font-semibold hover:text-primary/80 transition-colors"
                         >
-                          {item.auctionLink}
+                          {item.auctioneerName}
                         </a>
                       </div>
                     )}
