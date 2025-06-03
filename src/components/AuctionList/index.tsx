@@ -45,6 +45,7 @@ export default function PropertiesList() {
   const [isLoading, setIsLoading] = useState(false);
   const [total, setTotal] = useState(0);
   const [favorites, setFavorites] = useState<{ [id: string]: boolean }>({});
+  const [showOnlyFavorites, setShowOnlyFavorites] = useState(false);
   const { data: session } = useSession();
   const userId = (session?.user as any)?.id || 'anon';
   const [filterConfig, setFilterConfig] = useState<any>(null);
@@ -75,7 +76,7 @@ export default function PropertiesList() {
     const fetchData = async () => {
       setIsLoading(true);
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/properties?page=${page}&limit=${PAGE_SIZE}&${filterQuery}`, {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/properties?page=${page}&limit=${PAGE_SIZE}&${filterQuery}${showOnlyFavorites ? '&showOnlyFavorites=true' : ''}`, {
           headers: {
             'x-user-id': userId,
           },
@@ -102,12 +103,27 @@ export default function PropertiesList() {
     };
     fetchData();
     return () => { cancelled = true; };
-  }, [page, filterQuery, userId]);
+  }, [page, filterQuery, userId, showOnlyFavorites]);
 
   const handleApply = (qs: string) => {
     setFilterQuery(qs);
     setPage(1);
+    // Se a query string estiver vazia, limpa também o filtro de favoritos
+    if (!qs) {
+      setShowOnlyFavorites(false);
+    }
     router.replace(`${window.location.pathname}${qs ? `?${qs}` : ""}`, { scroll: false });
+  };
+
+  // Função para limpar todos os filtros
+  const handleClearFilters = () => {
+    if (!filterConfig) return;
+    const defaults = getInitialSelections(filterConfig);
+    const defaultQs = buildQueryString(defaults, filterConfig);
+    setFilterQuery(defaultQs);
+    setShowOnlyFavorites(false);
+    setPage(1);
+    router.replace(`${window.location.pathname}${defaultQs ? `?${defaultQs}` : ""}`, { scroll: false });
   };
 
   const formatCurrency = (value: number) =>
@@ -167,10 +183,32 @@ export default function PropertiesList() {
   return (
     <div className="w-full p-6 min-h-[80vh]">
       <div className="bg-white mb-6">
-        <FilterBar onApply={handleApply} initialQueryString={filterQuery} />
+        <FilterBar onApply={handleApply} onClear={handleClearFilters} initialQueryString={filterQuery} />
       </div>
-      <div className="w-full text-sm text-gray-700 font-semibold mb-2 px-2">
-        {total} {total === 1 ? 'imóvel' : 'imóveis'} encontrado{total === 1 ? '' : 's'}
+      <div className="flex items-center justify-between mb-4 px-2">
+        <div className="text-sm text-gray-700 font-semibold">
+          {total} {total === 1 ? 'imóvel' : 'imóveis'} encontrado{total === 1 ? '' : 's'}
+        </div>
+        <button
+          onClick={() => setShowOnlyFavorites(!showOnlyFavorites)}
+          className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+            showOnlyFavorites 
+              ? 'bg-red-100 text-red-600 hover:bg-red-200' 
+              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+          }`}
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill={showOnlyFavorites ? 'currentColor' : 'none'}
+            viewBox="0 0 24 24"
+            strokeWidth={1.5}
+            stroke="currentColor"
+            className="w-5 h-5"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z" />
+          </svg>
+          {showOnlyFavorites ? 'Mostrar todos' : 'Apenas favoritos'}
+        </button>
       </div>
       {totalPages > 1 && (
         <div className="flex justify-center mt-12">

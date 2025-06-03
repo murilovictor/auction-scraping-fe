@@ -160,8 +160,14 @@ const parseQueryStringToSelections = (qs: string, filterConfig: FilterConfig): S
   return selections;
 };
 
-const FilterBar: React.FC<{ onApply?: (qs: string) => void; initialSelections?: Selections | null; initialQueryString?: string }> = ({
+const FilterBar: React.FC<{ 
+  onApply?: (qs: string) => void; 
+  onClear?: () => void;
+  initialSelections?: Selections | null; 
+  initialQueryString?: string 
+}> = ({
   onApply,
+  onClear,
   initialSelections,
   initialQueryString,
 }) => {
@@ -213,10 +219,13 @@ const FilterBar: React.FC<{ onApply?: (qs: string) => void; initialSelections?: 
 
   // limpa todos filtros
   const clearAll = () => {
+    if (!filterConfig) return;
     const initial = getInitialSelections(filterConfig);
     setSelections(initial);
     setApplied(initial);
-    onApply && onApply(buildQueryString(initial, filterConfig));
+    const defaultQs = buildQueryString(initial, filterConfig);
+    onApply && onApply(defaultQs);
+    onClear && onClear();
   };
 
   // limpa filtro individual
