@@ -7,7 +7,9 @@ import { useRouter } from "next/navigation";
 import { Card } from "@heroui/card";
 import { Pagination } from "@heroui/pagination";
 import { useSession } from "next-auth/react";
-import { FaHome, FaCar, FaRuler, FaMapMarkerAlt } from 'react-icons/fa'
+import { FaHome, FaCar, FaRuler, FaMapMarkerAlt, FaSearch } from 'react-icons/fa'
+import { Input } from "@heroui/input";
+import { useDebounce } from "@/hooks/useDebounce";
 
 const PAGE_SIZE = 30;
 
@@ -44,6 +46,8 @@ type Property = {
 export default function PropertiesList() {
   const router = useRouter();
   const [filterQuery, setFilterQuery] = useState("");
+  const [searchInput, setSearchInput] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   const [properties, setProperties] = useState<Property[]>([]);
   const [page, setPage] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
@@ -68,6 +72,15 @@ export default function PropertiesList() {
     if (!filterConfig) return;
     const qs = window.location.search.replace(/^\?/, "");
     setFilterQuery(qs);
+    
+    // Extrai o parâmetro de busca da URL
+    const searchParams = new URLSearchParams(qs);
+    const searchValue = searchParams.get('q');
+    if (searchValue) {
+      setSearchInput(searchValue);
+      setSearchQuery(searchValue);
+    }
+
     if (!qs) {
       const defaults = getInitialSelections(filterConfig);
       const defaultQs = buildQueryString(defaults, filterConfig);
@@ -81,7 +94,8 @@ export default function PropertiesList() {
     const fetchData = async () => {
       setIsLoading(true);
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/properties?page=${page}&limit=${PAGE_SIZE}&${filterQuery}${showOnlyFavorites ? '&showOnlyFavorites=true' : ''}`, {
+        const searchParam = searchQuery ? `&q=${encodeURIComponent(searchQuery)}` : '';
+        const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/properties?page=${page}&limit=${PAGE_SIZE}&${filterQuery}${searchParam}${showOnlyFavorites ? '&showOnlyFavorites=true' : ''}`, {
           headers: {
             'x-user-id': userId,
           },
@@ -90,7 +104,6 @@ export default function PropertiesList() {
         if (!cancelled) {
           setProperties(json.data);
           setTotal(json.meta.total || 0);
-          // Inicializa favoritos com base no backend
           const favs: { [id: string]: boolean } = {};
           json.data.forEach((item: any) => {
             favs[item.id] = !!item.isFavorite;
@@ -108,16 +121,36 @@ export default function PropertiesList() {
     };
     fetchData();
     return () => { cancelled = true; };
-  }, [page, filterQuery, userId, showOnlyFavorites]);
+  }, [page, filterQuery, searchQuery, userId, showOnlyFavorites]);
 
   const handleApply = (qs: string) => {
     setFilterQuery(qs);
     setPage(1);
-    // Se a query string estiver vazia, limpa também o filtro de favoritos
     if (!qs) {
       setShowOnlyFavorites(false);
     }
     router.replace(`${window.location.pathname}${qs ? `?${qs}` : ""}`, { scroll: false });
+  };
+
+  const handleSearch = () => {
+    setSearchQuery(searchInput);
+    setPage(1);
+    
+    // Atualiza a URL com o novo parâmetro de busca
+    const searchParams = new URLSearchParams(window.location.search);
+    if (searchInput) {
+      searchParams.set('q', searchInput);
+    } else {
+      searchParams.delete('q');
+    }
+    const newQueryString = searchParams.toString();
+    router.replace(`${window.location.pathname}${newQueryString ? `?${newQueryString}` : ""}`, { scroll: false });
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      handleSearch();
+    }
   };
 
   // Função para limpar todos os filtros
@@ -195,6 +228,28 @@ export default function PropertiesList() {
       <div className="bg-white mb-6">
         <FilterBar onApply={handleApply} onClear={handleClearFilters} initialQueryString={filterQuery} />
       </div>
+
+      {/* Campo de busca */}
+      <div className="max-w-2xl mx-auto mb-6">
+        <div className="relative">
+          <Input
+            type="text"
+            placeholder="Buscar por nome do imóvel..."
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            onKeyPress={handleKeyPress}
+            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
+          />
+          <button
+            onClick={handleSearch}
+            className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-primary transition-colors"
+            title="Buscar"
+          >
+            <FaSearch className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+
       <div className="flex items-center justify-between mb-4 px-2">
         <div className="text-sm text-gray-700 font-semibold">
           {total} {total === 1 ? 'imóvel' : 'imóveis'} encontrado{total === 1 ? '' : 's'}
