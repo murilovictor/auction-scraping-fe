@@ -35,6 +35,10 @@ type Property = {
   landArea?: number;
   rooms?: number;
   garageSpaces?: number;
+  saleType?: string;
+  paymentConditions?: string[];
+  expensePaymentRules?: string[];
+  importantObservations?: string[];
 };
 
 export default function PropertiesList() {
@@ -49,6 +53,7 @@ export default function PropertiesList() {
   const { data: session } = useSession();
   const userId = (session?.user as any)?.id || 'anon';
   const [filterConfig, setFilterConfig] = useState<any>(null);
+  const componentRef = React.useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     // Carrega os filtros do backend
@@ -180,8 +185,13 @@ export default function PropertiesList() {
     });
   };
 
+  const handlePageChange = (newPage: number) => {
+    setPage(newPage);
+    componentRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
   return (
-    <div className="w-full p-6 min-h-[80vh]">
+    <div className="w-full p-6 min-h-[80vh]" ref={componentRef}>
       <div className="bg-white mb-6">
         <FilterBar onApply={handleApply} onClear={handleClearFilters} initialQueryString={filterQuery} />
       </div>
@@ -191,11 +201,10 @@ export default function PropertiesList() {
         </div>
         <button
           onClick={() => setShowOnlyFavorites(!showOnlyFavorites)}
-          className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-            showOnlyFavorites 
-              ? 'bg-red-100 text-red-600 hover:bg-red-200' 
+          className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${showOnlyFavorites
+              ? 'bg-red-100 text-red-600 hover:bg-red-200'
               : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-          }`}
+            }`}
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -218,7 +227,7 @@ export default function PropertiesList() {
             siblings={2}
             page={page}
             total={totalPages}
-            onChange={setPage}
+            onChange={handlePageChange}
           />
         </div>
       )}
@@ -231,24 +240,31 @@ export default function PropertiesList() {
         <div className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
           {properties.map((item: Property) => {
             const today = new Date();
-            today.setHours(0,0,0,0);
+            today.setHours(0, 0, 0, 0);
             // Primeiro Leilão
             const firstDate = item.firstSaleDate ? new Date(item.firstSaleDate) : null;
             const firstPassed = firstDate && firstDate < today;
             // Segundo Leilão
             const secondDate = item.secondSaleDate ? new Date(item.secondSaleDate) : null;
             const secondPassed = secondDate && secondDate < today;
-            
+
             const isFavorite = favorites[item.id] !== undefined ? favorites[item.id] : !!item.isFavorite;
             return (
               <Card key={item.id} className="flex flex-col">
                 <div className="relative w-full aspect-video bg-gray-100 flex items-center justify-center overflow-hidden rounded-t">
-                  {/* Tipo do imóvel */}
-                  {item.type && (
-                    <div className="absolute z-[1] left-1.5 top-1.5 px-2 py-1 bg-primary/90 text-white text-xs font-semibold rounded-md">
-                      {item.type}
-                    </div>
-                  )}
+                  {/* Tipo do imóvel e tipo do leilão */}
+                  <div className="absolute z-[1] left-1.5 top-1.5 flex flex-col gap-1">
+                    {item.type && (
+                      <div className="px-2 py-1 bg-primary/90 text-white text-xs font-semibold rounded-md">
+                        {item.type}
+                      </div>
+                    )}
+                    {item.saleType && (
+                      <div className="px-2 py-1 bg-secondary/90 text-white text-xs font-semibold rounded-md">
+                        {item.saleType}
+                      </div>
+                    )}
+                  </div>
                   {/* Botão de favorito */}
                   <button
                     aria-label="Favoritar"
@@ -285,6 +301,20 @@ export default function PropertiesList() {
                   {item.propertyName && (
                     <div className="text-base font-semibold text-gray-800 mb-1 truncate" title={item.propertyName}>
                       {item.propertyName}
+                    </div>
+                  )}
+
+                  {/* Formas de pagamento */}
+                  {item.paymentConditions && item.paymentConditions.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mb-2">
+                      {item.paymentConditions.map((condition, index) => (
+                        <span
+                          key={index}
+                          className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full"
+                        >
+                          {condition}
+                        </span>
+                      ))}
                     </div>
                   )}
 
@@ -377,9 +407,7 @@ export default function PropertiesList() {
                   <div className="border-t border-gray-200 my-0" />
 
                   {/* Localização */}
-                  {/* <div className="text-xs text-gray-500 mt-2 font-semibold">
-                    {item.city} - {item.state} {item.neighborhood && `- ${item.neighborhood}`}
-                  </div> */}
+
 
                   {item.address && (
                     <a
@@ -392,11 +420,68 @@ export default function PropertiesList() {
                       {item.address}
                     </a>
                   )}
+
+                  {(item.neighborhood || item.city || item.state) && (
+                    <div className="flex items-center gap-1 mt-2">
+                      <span className="text-xs text-gray-400">📍</span>
+                      <a
+                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                          [item.neighborhood, item.city, item.state].filter(Boolean).join(', ')
+                        )}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-gray-500 mt-1 font-semibold underline hover:text-primary transition-colors"
+                        title="Buscar no Google Maps"
+                      >
+                        {[
+                          item.neighborhood,
+                          item.city,
+                          item.state
+                        ].filter(Boolean).join(' - ')}
+                      </a>
+                    </div>
+                  )}
+
+                  <div className="border-t border-gray-200 my-0" />
+
+                  {/* Regras de despesas */}
+                  {item.expensePaymentRules && item.expensePaymentRules.length > 0 && (
+                    <div className="flex flex-col gap-1 mt-2">
+                      <span className="text-xs text-gray-500 font-semibold">Regras de despesas:</span>
+                      <div className="flex flex-col gap-1">
+                        {item.expensePaymentRules.map((rule, index) => (
+                          <div key={index} className="text-xs text-gray-600 flex items-start gap-1">
+                            <span className="text-gray-400 font-semibold">•</span>
+                            <span>{rule}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Observações importantes */}
+                  {item.importantObservations && item.importantObservations.length > 0 && (
+                    <div className="flex flex-col gap-1 mt-2">
+                      <span className="text-xs font-semibold text-red-600">Observações importantes:</span>
+                      <div className="flex flex-col gap-1">
+                        {item.importantObservations.map((observation, index) => (
+                          <div key={index} className="text-xs text-red-600 flex items-start gap-1">
+                            <span className="text-red-400 font-semibold">•</span>
+                            <span>{observation}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Links */}
+                  <div className="border-t border-gray-200 my-0" />
+
                   <div className="flex flex-col gap-1 mt-2">
+
                     {item.propertyLink && (
                       <div className="flex items-center gap-1">
-                        <span className="text-xs text-gray-500">Caixa:</span>
+                        <span className="text-xs text-gray-500 font-semibold">Caixa:</span>
                         <a
                           href={item.propertyLink}
                           target="_blank"
@@ -439,7 +524,7 @@ export default function PropertiesList() {
             siblings={2}
             page={page}
             total={totalPages}
-            onChange={setPage}
+            onChange={handlePageChange}
           />
         </div>
       )}
