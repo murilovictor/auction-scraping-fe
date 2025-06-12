@@ -299,9 +299,17 @@ export default function PropertiesList() {
                 <div className="flex-1 flex flex-col gap-2 p-4">
                   {/* Nome do imóvel */}
                   {item.propertyName && (
-                    <div className="text-base font-semibold text-gray-800 mb-1 truncate" title={item.propertyName}>
+                    <a
+                      href={`https://www.google.com/search?q=${encodeURIComponent(
+                        `${item.propertyName} ${item.city || ''}`
+                      )}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-base font-semibold text-gray-800 mb-1 truncate hover:text-primary transition-colors"
+                      title={`Buscar ${item.propertyName} ${item.city || ''} no Google`}
+                    >
                       {item.propertyName}
-                    </div>
+                    </a>
                   )}
 
                   {/* Formas de pagamento */}
