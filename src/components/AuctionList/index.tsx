@@ -161,6 +161,8 @@ export default function PropertiesList() {
     setFilterQuery(defaultQs);
     setShowOnlyFavorites(false);
     setPage(1);
+    setSearchInput("");
+    setSearchQuery("");
     router.replace(`${window.location.pathname}${defaultQs ? `?${defaultQs}` : ""}`, { scroll: false });
   };
 
