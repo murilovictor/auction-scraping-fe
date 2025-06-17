@@ -51,6 +51,10 @@ export const buildQueryString = (filters: Selections, filterConfig: FilterConfig
   if (filters.paymentConditions && filters.paymentConditions.length) {
     params.set("paymentConditions", filters.paymentConditions.join(","));
   }
+  if (filters.expensePaymentRules && filters.expensePaymentRules.length) {
+    params.set("expensePaymentRules", filters.expensePaymentRules.join(","));
+  }
+  
   if (filters.price) {
     params.set("priceMin", String(filters.price.min));
     params.set("priceMax", String(filters.price.max));
@@ -119,7 +123,7 @@ const parseQueryStringToSelections = (qs: string, filterConfig: FilterConfig): S
   const params = new URLSearchParams(qs);
   const selections: any = {};
   params.forEach((value, key) => {
-    if (["propertyType", "modality", "paymentConditions"].includes(key)) {
+    if (["propertyType", "modality", "paymentConditions", "expensePaymentRules"].includes(key)) {
       selections[key] = value.split(",");
     } else if (key === "priceMin" || key === "priceMax") {
       selections.price = selections.price || {};
