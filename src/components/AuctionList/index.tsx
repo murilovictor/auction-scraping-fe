@@ -9,7 +9,6 @@ import { Pagination } from "@heroui/pagination";
 import { useSession } from "next-auth/react";
 import { FaHome, FaCar, FaRuler, FaMapMarkerAlt, FaSearch } from 'react-icons/fa'
 import { Input } from "@heroui/input";
-import { useDebounce } from "@/hooks/useDebounce";
 
 const PAGE_SIZE = 30;
 
@@ -41,6 +40,8 @@ type Property = {
   paymentConditions?: string[];
   expensePaymentRules?: string[];
   importantObservations?: string[];
+  createdAt?: string;
+  updatedAt?: string;
 };
 
 export default function PropertiesList() {
@@ -72,7 +73,7 @@ export default function PropertiesList() {
     if (!filterConfig) return;
     const qs = window.location.search.replace(/^\?/, "");
     setFilterQuery(qs);
-    
+
     // Extrai o parâmetro de busca da URL
     const searchParams = new URLSearchParams(qs);
     const searchValue = searchParams.get('q');
@@ -135,7 +136,7 @@ export default function PropertiesList() {
   const handleSearch = () => {
     setSearchQuery(searchInput);
     setPage(1);
-    
+
     // Atualiza a URL com o novo parâmetro de busca
     const searchParams = new URLSearchParams(window.location.search);
     if (searchInput) {
@@ -259,8 +260,8 @@ export default function PropertiesList() {
         <button
           onClick={() => setShowOnlyFavorites(!showOnlyFavorites)}
           className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${showOnlyFavorites
-              ? 'bg-red-100 text-red-600 hover:bg-red-200'
-              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            ? 'bg-red-100 text-red-600 hover:bg-red-200'
+            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
             }`}
         >
           <svg
@@ -321,6 +322,24 @@ export default function PropertiesList() {
                         {item.saleType}
                       </div>
                     )}
+                    {/* Selo Novo abaixo do saleType */}
+                    {item.createdAt && (() => {
+                      const createdAtDate = new Date(item.createdAt);
+                      const now = new Date();
+                      now.setHours(0, 0, 0, 0);
+                      const twoDaysAgo = new Date(now);
+                      twoDaysAgo.setDate(now.getDate() - 2);
+                      if (createdAtDate >= twoDaysAgo) {
+                        return (
+                          <div className="mt-1">
+                            <span className="px-2 py-1 bg-green-600 text-white text-xs font-bold rounded-md shadow">
+                              Novo
+                            </span>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
                   </div>
                   {/* Botão de favorito */}
                   <button
@@ -347,6 +366,7 @@ export default function PropertiesList() {
                       <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z" />
                     </svg>
                   </button>
+
                   {item.photo ? (
                     <img src={item.photo} alt="Foto do imóvel" className="object-cover w-full h-full" />
                   ) : (
@@ -571,6 +591,20 @@ export default function PropertiesList() {
                         </a>
                       </div>
                     )}
+
+                    {/* Datas de criação e atualização */}
+                    <div className="flex flex-row gap-2 mt-1">
+                      {item.createdAt && (
+                        <span className="text-[10px] text-gray-400">
+                          Criado: {new Date(item.createdAt).toLocaleDateString("pt-BR")}
+                        </span>
+                      )}
+                      {item.updatedAt && (
+                        <span className="text-[10px] text-gray-400">
+                          Atualizado: {new Date(item.updatedAt).toLocaleDateString("pt-BR")}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
               </Card>
