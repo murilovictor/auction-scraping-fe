@@ -85,6 +85,9 @@ export const buildQueryString = (filters: Selections, filterConfig: FilterConfig
     if (filters.location.city) {
       params.set("city", filters.location.city);
     }
+    if (filters.location.neighborhood) {
+      params.set("neighborhood", filters.location.neighborhood);
+    }
   }
 
   // sort (agora suporta múltiplos sort)
@@ -140,7 +143,7 @@ const parseQueryStringToSelections = (qs: string, filterConfig: FilterConfig): S
       if (key === "firstDiscountMax") selections.discounts.discount1.max = Number(value);
       if (key === "secondDiscountMin") selections.discounts.discount2.min = Number(value);
       if (key === "secondDiscountMax") selections.discounts.discount2.max = Number(value);
-    } else if (key === "state" || key === "city") {
+    } else if (key === "state" || key === "city" || key === "neighborhood") {
       selections.location = selections.location || {};
       selections.location[key] = value;
     } else {
@@ -353,9 +356,9 @@ const FilterBar: React.FC<{
             <Chip 
               key="location-state" 
               onClose={() => {
-                setSelections(prev => ({ ...prev, location: { state: "", city: "" } }));
-                setApplied(prev => ({ ...prev, location: { state: "", city: "" } }));
-                onApply && onApply(buildQueryString({ ...applied, location: { state: "", city: "" } }, filterConfig));
+                setSelections(prev => ({ ...prev, location: { state: "", city: "", neighborhood: "" } }));
+                setApplied(prev => ({ ...prev, location: { state: "", city: "", neighborhood: "" } }));
+                onApply && onApply(buildQueryString({ ...applied, location: { state: "", city: "", neighborhood: "" } }, filterConfig));
               }}
               className="text-sm"
             >
@@ -370,13 +373,31 @@ const FilterBar: React.FC<{
             <Chip 
               key="location-city" 
               onClose={() => {
-                setSelections(prev => ({ ...prev, location: { ...prev.location, city: "" } }));
-                setApplied(prev => ({ ...prev, location: { ...prev.location, city: "" } }));
-                onApply && onApply(buildQueryString({ ...applied, location: { ...applied.location, city: "" } }, filterConfig));
+                setSelections(prev => ({ ...prev, location: { ...prev.location, city: "", neighborhood: "" } }));
+                setApplied(prev => ({ ...prev, location: { ...prev.location, city: "", neighborhood: "" } }));
+                onApply && onApply(buildQueryString({ ...applied, location: { ...applied.location, city: "", neighborhood: "" } }, filterConfig));
               }}
               className="text-sm"
             >
               Cidade: {cityObj ? cityObj.label : cityVal}
+            </Chip>
+          );
+        }
+        if (val.neighborhood && cityVal && stateVal) {
+          const stateObj = locationConfig?.options?.find((s: any) => s.value === stateVal);
+          const cityObj = stateObj?.cities?.find((c: any) => c.value === cityVal);
+          const neighborhoodObj = cityObj?.neighborhoods?.find((n: any) => n.value === val.neighborhood);
+          chips.push(
+            <Chip 
+              key="location-neighborhood" 
+              onClose={() => {
+                setSelections(prev => ({ ...prev, location: { ...prev.location, neighborhood: "" } }));
+                setApplied(prev => ({ ...prev, location: { ...prev.location, neighborhood: "" } }));
+                onApply && onApply(buildQueryString({ ...applied, location: { ...applied.location, neighborhood: "" } }, filterConfig));
+              }}
+              className="text-sm"
+            >
+              Bairro: {neighborhoodObj ? neighborhoodObj.label : val.neighborhood}
             </Chip>
           );
         }
@@ -573,7 +594,7 @@ const FilterBar: React.FC<{
                             onChange={e => {
                               setSelections(prev => ({
                                 ...prev,
-                                location: { state: e.target.value, city: "" }
+                                location: { state: e.target.value, city: "", neighborhood: "" }
                               }));
                             }}
                           >
@@ -592,7 +613,7 @@ const FilterBar: React.FC<{
                             onChange={e => {
                               setSelections(prev => ({
                                 ...prev,
-                                location: { ...prev.location, city: e.target.value }
+                                location: { ...prev.location, city: e.target.value, neighborhood: "" }
                               }));
                             }}
                             disabled={!selections.location?.state}
@@ -601,6 +622,27 @@ const FilterBar: React.FC<{
                             {cfg.options && selections.location?.state &&
                               cfg.options.find((state: any) => state.value === selections.location.state)?.cities?.map((city: any) => (
                                 <option key={city.value} value={city.value}>{city.label}</option>
+                              ))}
+                          </select>
+                        </div>
+                        {/* Bairro */}
+                        <div>
+                          <label className="block mb-1 text-sm font-medium text-gray-700">Bairro</label>
+                          <select
+                            className="w-full border rounded px-2 py-1 text-sm"
+                            value={selections.location?.neighborhood || ""}
+                            onChange={e => {
+                              setSelections(prev => ({
+                                ...prev,
+                                location: { ...prev.location, neighborhood: e.target.value }
+                              }));
+                            }}
+                            disabled={!selections.location?.city}
+                          >
+                            <option value="">Selecione o bairro</option>
+                            {cfg.options && selections.location?.state && selections.location?.city &&
+                              cfg.options.find((state: any) => state.value === selections.location.state)?.cities?.find((city: any) => city.value === selections.location.city)?.neighborhoods?.map((neighborhood: any) => (
+                                <option key={neighborhood.value} value={neighborhood.value}>{neighborhood.label}</option>
                               ))}
                           </select>
                         </div>
