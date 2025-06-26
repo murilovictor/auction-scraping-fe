@@ -107,6 +107,14 @@ const Footer = () => {
                     Início
                   </Link>
                 </li>
+                <li>
+                  <Link
+                    href="/auction-list"
+                    className="mb-3 inline-block text-base text-gray-7 hover:text-primary"
+                  >
+                    Buscar Leilões
+                  </Link>
+                </li>                
               </ul>
             </div>
           </div>

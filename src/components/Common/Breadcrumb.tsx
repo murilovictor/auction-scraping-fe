@@ -28,7 +28,7 @@ const Breadcrumb = ({
                       href="/"
                       className="text-dark flex items-center gap-[10px] text-base font-medium dark:text-white"
                     >
-                      Home
+                      Início
                     </Link>
                   </li>
                   <li>

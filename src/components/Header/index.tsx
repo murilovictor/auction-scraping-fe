@@ -273,7 +273,7 @@ const Header = () => {
                           }}
                           className="w-full rounded-lg bg-primary px-6 py-3 text-base font-medium text-white duration-300 ease-in-out hover:bg-primary/90"
                         >
-                          Sign Out
+                          Sair
                         </button>
                       </div>
                     ) : (
@@ -299,7 +299,7 @@ const Header = () => {
               </div>
               <div className="flex items-center justify-end pr-16 sm:pr-0">
                 {/* theme toggler */}
-                <button
+                {/* <button
                   aria-label="theme toggler"
                   onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
                   className="flex h-8 w-8 items-center justify-center text-body-color duration-300 dark:text-white"
@@ -323,7 +323,7 @@ const Header = () => {
                       </g>
                     </svg>
                   </span>
-                </button>
+                </button> */}
 
                 {/* Desktop auth buttons */}
                 <div className="hidden sm:flex sm:items-center sm:gap-4">
@@ -341,14 +341,14 @@ const Header = () => {
                           onClick={() => signOut()}
                           className="signUpBtn rounded-lg bg-primary bg-opacity-100 px-6 py-3 text-base font-medium text-white duration-300 ease-in-out hover:bg-opacity-20 hover:text-dark"
                         >
-                          Sign Out
+                          Sair
                         </button>
                       ) : (
                         <button
                           onClick={() => signOut()}
                           className="signUpBtn rounded-lg bg-white bg-opacity-20 px-6 py-3 text-base font-medium text-white duration-300 ease-in-out hover:bg-opacity-100 hover:text-dark"
                         >
-                          Sign Out
+                          Sair
                         </button>
                       )}
                     </>
