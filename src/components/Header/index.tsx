@@ -258,9 +258,46 @@ const Header = () => {
                       ) : null,
                     )}
                   </ul>
+                  
+                  {/* Mobile auth buttons */}
+                  <div className="mt-6 border-t border-body-color/20 pt-6 dark:border-body-color/10 sm:hidden">
+                    {session?.user ? (
+                      <div className="space-y-3">
+                        <p className="px-4 py-2 text-base font-medium text-dark dark:text-white">
+                          {session?.user?.name}
+                        </p>
+                        <button
+                          onClick={() => {
+                            signOut();
+                            navbarToggleHandler();
+                          }}
+                          className="w-full rounded-lg bg-primary px-6 py-3 text-base font-medium text-white duration-300 ease-in-out hover:bg-primary/90"
+                        >
+                          Sign Out
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        <Link
+                          href="/signin"
+                          onClick={navbarToggleHandler}
+                          className="block px-4 py-2 text-base font-medium text-dark hover:text-primary dark:text-white dark:hover:text-primary"
+                        >
+                          Entrar
+                        </Link>
+                        <Link
+                          href="/signup"
+                          onClick={navbarToggleHandler}
+                          className="block w-full rounded-lg bg-primary px-6 py-3 text-center text-base font-medium text-white duration-300 ease-in-out hover:bg-primary/90"
+                        >
+                          Criar conta
+                        </Link>
+                      </div>
+                    )}
+                  </div>
                 </nav>
               </div>
-              <div className="hidden items-center justify-end pr-16 sm:flex lg:pr-0">
+              <div className="flex items-center justify-end pr-16 sm:pr-0">
                 {/* theme toggler */}
                 <button
                   aria-label="theme toggler"
@@ -288,72 +325,75 @@ const Header = () => {
                   </span>
                 </button>
 
-                {session?.user ? (
-                  <>
-                    <p
-                      className={`loginBtn px-7 py-3 text-base font-medium ${
-                        !sticky && pathUrl === "/" ? "text-white" : "text-dark"
-                      }`}
-                    >
-                      {session?.user?.name}
-                    </p>
-                    {pathUrl !== "/" || sticky ? (
-                      <button
-                        onClick={() => signOut()}
-                        className="signUpBtn rounded-lg bg-primary bg-opacity-100 px-6 py-3 text-base font-medium text-white duration-300 ease-in-out hover:bg-opacity-20 hover:text-dark"
+                {/* Desktop auth buttons */}
+                <div className="hidden sm:flex sm:items-center sm:gap-4">
+                  {session?.user ? (
+                    <>
+                      <p
+                        className={`loginBtn px-7 py-3 text-base font-medium ${
+                          !sticky && pathUrl === "/" ? "text-white" : "text-dark"
+                        }`}
                       >
-                        Sign Out
-                      </button>
-                    ) : (
-                      <button
-                        onClick={() => signOut()}
-                        className="signUpBtn rounded-lg bg-white bg-opacity-20 px-6 py-3 text-base font-medium text-white duration-300 ease-in-out hover:bg-opacity-100 hover:text-dark"
-                      >
-                        Sign Out
-                      </button>
-                    )}
-                  </>
-                ) : (
-                  <>
-                    {pathUrl !== "/" ? (
-                      <>
-                        <Link
-                          href="/signin"
-                          className="px-7 py-3 text-base font-medium text-dark hover:opacity-70 dark:text-white"
+                        {session?.user?.name}
+                      </p>
+                      {pathUrl !== "/" || sticky ? (
+                        <button
+                          onClick={() => signOut()}
+                          className="signUpBtn rounded-lg bg-primary bg-opacity-100 px-6 py-3 text-base font-medium text-white duration-300 ease-in-out hover:bg-opacity-20 hover:text-dark"
                         >
-                          Sign In
-                        </Link>
-                        <Link
-                          href="/signup"
-                          className="rounded-lg bg-primary px-6 py-3 text-base font-medium text-white duration-300 ease-in-out hover:bg-primary/90 dark:bg-white/10 dark:hover:bg-white/20"
+                          Sign Out
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => signOut()}
+                          className="signUpBtn rounded-lg bg-white bg-opacity-20 px-6 py-3 text-base font-medium text-white duration-300 ease-in-out hover:bg-opacity-100 hover:text-dark"
                         >
-                          Sign Up
-                        </Link>
-                      </>
-                    ) : (
-                      <>
-                        <Link
-                          href="/signin"
-                          className={`px-7 py-3 text-base font-medium hover:opacity-70 ${
-                            sticky ? "text-dark dark:text-white" : "text-white"
-                          }`}
-                        >
-                          Sign In
-                        </Link>
-                        <Link
-                          href="/signup"
-                          className={`rounded-lg px-6 py-3 text-base font-medium text-white duration-300 ease-in-out ${
-                            sticky
-                              ? "bg-primary hover:bg-primary/90 dark:bg-white/10 dark:hover:bg-white/20"
-                              : "bg-white/10 hover:bg-white/20"
-                          }`}
-                        >
-                          Sign Up
-                        </Link>
-                      </>
-                    )}
-                  </>
-                )}
+                          Sign Out
+                        </button>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      {pathUrl !== "/" ? (
+                        <>
+                          <Link
+                            href="/signin"
+                            className="px-7 py-3 text-base font-medium text-dark hover:opacity-70 dark:text-white"
+                          >
+                            Entrar
+                          </Link>
+                          <Link
+                            href="/signup"
+                            className="rounded-lg bg-primary px-6 py-3 text-base font-medium text-white duration-300 ease-in-out hover:bg-primary/90 dark:bg-white/10 dark:hover:bg-white/20"
+                          >
+                            Criar conta
+                          </Link>
+                        </>
+                      ) : (
+                        <>
+                          <Link
+                            href="/signin"
+                            className={`px-7 py-3 text-base font-medium hover:opacity-70 ${
+                              sticky ? "text-dark dark:text-white" : "text-white"
+                            }`}
+                          >
+                            Entrar
+                          </Link>
+                          <Link
+                            href="/signup"
+                            className={`rounded-lg px-6 py-3 text-base font-medium text-white duration-300 ease-in-out ${
+                              sticky
+                                ? "bg-primary hover:bg-primary/90 dark:bg-white/10 dark:hover:bg-white/20"
+                                : "bg-white/10 hover:bg-white/20"
+                            }`}
+                          >
+                            Criar conta
+                          </Link>
+                        </>
+                      )}
+                    </>
+                  )}
+                </div>
               </div>
             </div>
           </div>

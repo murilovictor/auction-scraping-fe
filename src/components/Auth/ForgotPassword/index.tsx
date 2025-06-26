@@ -15,7 +15,7 @@ const ForgotPassword = () => {
     e.preventDefault();
 
     if (!email) {
-      toast.error("Please enter your email address.");
+      toast.error("Por favor, insira seu email.");
 
       return;
     }
@@ -28,7 +28,7 @@ const ForgotPassword = () => {
       });
 
       if (res.status === 404) {
-        toast.error("User not found.");
+        toast.error("Usuário não encontrado.");
         return;
       }
 

@@ -14,27 +14,26 @@ import { getAllPosts } from "@/utils/markdown";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Play Next.js - SaaS Starter Kit and Boilerplate for Next.js",
-  description: "Free Next.js SaaS Boilerplate and Starter Kit designed and built for SaaS startups. It comes with all necessary integrations, pages, and components you need to launch a feature-rich SaaS websites.",
+  title: "Play Leilões",
+  description: "Play Leilões - A melhor plataforma de leilões online",
 };
 
 export default function Home() {
-  const posts = getAllPosts(["title", "date", "excerpt", "coverImage", "slug"]);
+  // const posts = getAllPosts(["title", "date", "excerpt", "coverImage", "slug"]);
 
   return (
     <main>
       <ScrollUp />
       <Hero />
       <Features />
-      <About />
-      <CallToAction />
-      <Pricing />
-      <Testimonials />
-      <Faq />
-      <Team />
+      {/* <About /> */}
+      {/* <CallToAction /> */}
+      {/* <Pricing /> */}
+      {/* <Testimonials /> */}
+      {/* <Faq />
       <HomeBlogSection posts={posts} />
       <Contact />
-      <Clients />
+      <Clients /> */}
     </main>
   );
 }

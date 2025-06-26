@@ -17,9 +17,9 @@ const featuresData: Feature[] = [
         />
       </svg>
     ),
-    title: "Free and Open-Source",
-    paragraph: "Lorem Ipsum is simply dummy text of the printing and industry.",
-    btn: "Learn More",
+    title: "Pesquisa avançada",
+    paragraph: "Pesquise por segmentos, categorias, preços, descontos e muito mais.",
+    btn: "",
     btnLink: "/#",
   },
   {
@@ -38,9 +38,9 @@ const featuresData: Feature[] = [
         />
       </svg>
     ),
-    title: "Modern Design",
-    paragraph: "Lorem Ipsum is simply dummy text of the printing and industry.",
-    btn: "Learn More",
+    title: "Novas oportunidades",
+    paragraph: "Todo dia são lançados novos leilões, com preços acessíveis e oportunidades de ganhar.",
+    btn: "",
     btnLink: "/#",
   },
   {
@@ -91,9 +91,9 @@ const featuresData: Feature[] = [
         />
       </svg>
     ),
-    title: "SaaS Starter Kit",
-    paragraph: "Lorem Ipsum is simply dummy text of the printing and industry.",
-    btn: "Learn More",
+    title: "Calculadora de viabilidade",
+    paragraph: "Calcule a viabilidade de um leilão antes de participar.",
+    btn: "",
     btnLink: "/#",
   },
   {
@@ -124,9 +124,9 @@ const featuresData: Feature[] = [
         />
       </svg>
     ),
-    title: "All Essential Integrations",
-    paragraph: "Lorem Ipsum is simply dummy text of the printing and industry.",
-    btn: "Learn More",
+    title: "Utilize AI para analisar",
+    paragraph: "Com a nossa IA, você pode analisar leilões e ganhar mais chances de ganhar.",
+    btn: "",
     btnLink: "/#",
   },
 ];

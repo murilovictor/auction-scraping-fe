@@ -4,13 +4,13 @@ import { Metadata } from "next";
 
 export const metadata: Metadata = {
   title:
-    "Sign Up | Play SaaS Starter Kit and Boilerplate for Next.js",
+    "Criar conta | Play Leilões",
 };
 
 const SignupPage = () => {
   return (
     <>
-      <Breadcrumb pageName="Sign Up Page" />
+      <Breadcrumb pageName="Criar conta" />
 
       <SignUp />
     </>

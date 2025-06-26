@@ -23,14 +23,14 @@ export const authOptions: NextAuthOptions = {
       name: "credentials",
       credentials: {
         email: { label: "Email", type: "text", placeholder: "Jhondoe" },
-        password: { label: "Password", type: "password" },
-        username: { label: "Username", type: "text", placeholder: "Jhon Doe" },
+        password: { label: "Senha", type: "password" },
+        username: { label: "Nome de usuário", type: "text", placeholder: "Jhon Doe" },
       },
 
       async authorize(credentials) {
         // check to see if email and password is there
         if (!credentials?.email || !credentials?.password) {
-          throw new Error("Please enter an email or password");
+          throw new Error("Por favor, insira um email ou senha");
         }
 
         // check to see if user already exist
@@ -42,7 +42,7 @@ export const authOptions: NextAuthOptions = {
 
         // if user was not found
         if (!user || !user?.password) {
-          throw new Error("Invalid email or password");
+          throw new Error("Email ou senha inválidos");
         }
 
         // check to see if passwords match
@@ -55,7 +55,7 @@ export const authOptions: NextAuthOptions = {
 
         if (!passwordMatch) {
           console.log("test", passwordMatch);
-          throw new Error("Incorrect password");
+          throw new Error("Senha inválida");
         }
 
         return user;

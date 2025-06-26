@@ -4,13 +4,13 @@ import Breadcrumb from "@/components/Common/Breadcrumb";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Forgot Password | Play SaaS Starter Kit and Boilerplate for Next.js",
+  title: "Esqueci minha senha | Play Leilões",
 };
 
 const ForgotPasswordPage = () => {
   return (
     <>
-      <Breadcrumb pageName="Forget Password" />
+      <Breadcrumb pageName="Esqueci minha senha" />
       <ForgotPassword />
     </>
   );

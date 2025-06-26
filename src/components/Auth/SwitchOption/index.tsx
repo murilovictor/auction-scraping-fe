@@ -15,7 +15,7 @@ const SwitchOption = ({
         }`}
         onClick={() => setIsPassword(false)}
       >
-        Magic Link
+        Acesso por email
       </button>
       <button
         className={`w-full rounded-lg border px-6 py-3 text-base outline-none transition-all duration-300 hover:border-dark-3 hover:bg-dark-3 hover:text-white dark:border-transparent dark:hover:bg-dark-3 dark:hover:shadow-none  ${
@@ -23,7 +23,7 @@ const SwitchOption = ({
         }`}
         onClick={() => setIsPassword(true)}
       >
-        Password
+        Senha
       </button>
     </div>
   );

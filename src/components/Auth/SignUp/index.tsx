@@ -88,7 +88,7 @@ const SignUp = () => {
                   <div className="mb-[22px]">
                     <input
                       type="text"
-                      placeholder="Name"
+                      placeholder="Nome"
                       name="name"
                       required
                       className="w-full rounded-md border border-stroke bg-transparent px-5 py-3 text-base text-dark outline-none transition placeholder:text-dark-6 focus:border-primary focus-visible:shadow-none dark:border-dark-3 dark:text-white dark:focus:border-primary"
@@ -106,7 +106,7 @@ const SignUp = () => {
                   <div className="mb-[22px]">
                     <input
                       type="password"
-                      placeholder="Password"
+                      placeholder="Senha"
                       name="password"
                       required
                       className="w-full rounded-md border border-stroke bg-transparent px-5 py-3 text-base text-dark outline-none transition placeholder:text-dark-6 focus:border-primary focus-visible:shadow-none dark:border-dark-3 dark:text-white dark:focus:border-primary"
@@ -117,7 +117,7 @@ const SignUp = () => {
                       type="submit"
                       className="flex w-full cursor-pointer items-center justify-center rounded-md border border-primary bg-primary px-5 py-3 text-base text-white transition duration-300 ease-in-out hover:bg-blue-dark"
                     >
-                      Sign Up {loading && <Loader />}
+                      Criar conta {loading && <Loader />}
                     </button>
                   </div>
                 </form>
@@ -126,23 +126,23 @@ const SignUp = () => {
               )}
 
               <p className="text-body-secondary mb-4 text-base">
-                By creating an account you are agree with our{" "}
+                Ao criar uma conta, você concorda com nossos{" "}
                 <Link href="/#" className="text-primary hover:underline">
-                  Privacy
+                  Privacidade
                 </Link>{" "}
                 and{" "}
                 <Link href="/#" className="text-primary hover:underline">
-                  Policy
+                  Política de privacidade
                 </Link>
               </p>
 
               <p className="text-body-secondary text-base">
-                Already have an account?
+                Já tem uma conta?
                 <Link
                   href="/signin"
                   className="pl-2 text-primary hover:underline"
                 >
-                  Sign In
+                  Entrar
                 </Link>
               </p>
 
