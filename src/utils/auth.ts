@@ -62,11 +62,6 @@ export const authOptions: NextAuthOptions = {
       },
     }),
 
-    GitHubProvider({
-      clientId: process.env.GITHUB_CLIENT_ID!,
-      clientSecret: process.env.GITHUB_CLIENT_SECRET!,
-    }),
-
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
@@ -111,7 +106,21 @@ export const authOptions: NextAuthOptions = {
       }
       return session;
     },
+
+    redirect: async ({ url, baseUrl }) => {
+      // Se o usuário está tentando acessar a página de login e já está autenticado
+      if (url.startsWith(baseUrl + "/signin")) {
+        return baseUrl + "/";
+      }
+      
+      // Se é um redirecionamento interno, permite
+      if (url.startsWith(baseUrl)) {
+        return url;
+      }
+      
+      // Para URLs externas, redireciona para home
+      return baseUrl + "/";
+    },
   },
 
-  // debug: process.env.NODE_ENV === "developement",
 };
