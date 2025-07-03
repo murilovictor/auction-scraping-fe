@@ -167,6 +167,51 @@ const parseQueryStringToSelections = (qs: string, filterConfig: FilterConfig): S
   return selections;
 };
 
+// Funções para formatação de moeda
+const formatCurrencyBR = (value: number): string => {
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  }).format(value);
+};
+
+const parseCurrencyBR = (value: string): number => {
+  // Remove R$, espaços, pontos e converte vírgula para ponto
+  const cleanValue = value.replace(/R\$\s*/g, '').replace(/\./g, '').replace(',', '.');
+  const parsed = parseFloat(cleanValue);
+  return isNaN(parsed) ? 0 : parsed;
+};
+
+const formatCurrencyInput = (value: string): string => {
+  // Remove tudo exceto números
+  const numbers = value.replace(/\D/g, '');
+  if (numbers === '') return '';
+  
+  // Converte para número e formata
+  const number = parseInt(numbers, 10);
+  return formatCurrencyBR(number);
+};
+
+// Função para formatação em tempo real
+const formatCurrencyRealTime = (inputValue: string): string => {
+  // Remove formatação existente
+  const cleanValue = inputValue.replace(/R\$\s*/g, '').replace(/\./g, '').replace(',', '.');
+  const numbers = cleanValue.replace(/\D/g, '');
+  
+  if (numbers === '') return '';
+  
+  const numericValue = parseInt(numbers, 10);
+  return formatCurrencyBR(numericValue);
+};
+
+// Função para permitir digitação livre
+const allowFreeTyping = (value: string): string => {
+  // Remove apenas R$ e espaços, mantém números, pontos e vírgulas
+  return value.replace(/R\$\s*/g, '');
+};
+
 const FilterBar: React.FC<{ 
   onApply?: (qs: string) => void; 
   onClear?: () => void;
@@ -182,6 +227,7 @@ const FilterBar: React.FC<{
   const [isOpen, setIsOpen] = useState(false);
   const [selections, setSelections] = useState<Selections>({});
   const [applied, setApplied] = useState<Selections>({});
+  const [priceInputs, setPriceInputs] = useState({ min: "", max: "" });
 
   // Carrega os filtros do backend
   useEffect(() => {
@@ -216,8 +262,13 @@ const FilterBar: React.FC<{
   useEffect(() => {
     if (isOpen) {
       setSelections(applied);
+      // Sincroniza inputs de preço
+      setPriceInputs({
+        min: applied.price?.min ? formatCurrencyBR(applied.price.min) : "",
+        max: applied.price?.max ? formatCurrencyBR(applied.price.max) : ""
+      });
     }
-  }, [isOpen]);
+  }, [isOpen, applied]);
 
   // Só renderiza se filterConfig estiver carregado
   if (!filterConfig) {
@@ -270,7 +321,7 @@ const FilterBar: React.FC<{
             onClose={() => clearFilter(key)}
             className="text-sm"
           >
-            Preço: R$ {val.min.toLocaleString()} – R$ {val.max.toLocaleString()}
+            Preço: {formatCurrencyBR(val.min)} – {formatCurrencyBR(val.max)}
           </Chip>,
         );
       }
@@ -466,36 +517,69 @@ const FilterBar: React.FC<{
                     {cfg.type === "slider" && (
                       <div className="w-full">
                         {cfg.key === "price" && cfg.slider && (
-                          <>
-                            <div className="flex justify-between mb-1 text-sm text-gray-600">
-                              <span>
-                                {selections.price?.min === cfg.slider.min
-                                  ? "Sem valor mínimo"
-                                  : `R$ ${selections.price?.min.toLocaleString()}`}
-                              </span>
-                              <span>
-                                {selections.price?.max === cfg.slider.max
-                                  ? "Sem limite definido"
-                                  : `R$ ${selections.price?.max.toLocaleString()}`}
-                              </span>
+                          <div className="space-y-4">
+                            <div className="grid grid-cols-2 gap-4">
+                              {/* Preço Mínimo */}
+                              <div>
+                                <label className="block mb-1 text-sm font-medium text-gray-700">
+                                  Preço Mínimo
+                                </label>
+                                <input
+                                  type="text"
+                                  placeholder="R$ 0,00"
+                                  value={priceInputs.min}
+                                  onChange={(e) => {
+                                    const formattedValue = formatCurrencyRealTime(e.target.value);
+                                    setPriceInputs(prev => ({ ...prev, min: formattedValue }));
+                                  }}
+                                  onBlur={(e) => {
+                                    // Converte para número quando sai do campo
+                                    const numbers = e.target.value.replace(/\D/g, '');
+                                    const numericValue = numbers ? parseInt(numbers, 10) : 0;
+                                    
+                                    setSelections((prev) => ({
+                                      ...prev,
+                                      price: {
+                                        min: numericValue,
+                                        max: prev.price?.max || cfg.slider.max
+                                      }
+                                    }));
+                                  }}
+                                  className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                                />
+                              </div>
+                              
+                              {/* Preço Máximo */}
+                              <div>
+                                <label className="block mb-1 text-sm font-medium text-gray-700">
+                                  Preço Máximo
+                                </label>
+                                <input
+                                  type="text"
+                                  placeholder="R$ 0,00"
+                                  value={priceInputs.max}
+                                  onChange={(e) => {
+                                    const formattedValue = formatCurrencyRealTime(e.target.value);
+                                    setPriceInputs(prev => ({ ...prev, max: formattedValue }));
+                                  }}
+                                  onBlur={(e) => {
+                                    // Converte para número quando sai do campo
+                                    const numbers = e.target.value.replace(/\D/g, '');
+                                    const numericValue = numbers ? parseInt(numbers, 10) : 0;
+                                    
+                                    setSelections((prev) => ({
+                                      ...prev,
+                                      price: {
+                                        min: prev.price?.min || cfg.slider.min,
+                                        max: numericValue
+                                      }
+                                    }));
+                                  }}
+                                  className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                                />
+                              </div>
                             </div>
-                            <Slider
-                              minValue={cfg.slider.min}
-                              maxValue={cfg.slider.max}
-                              step={cfg.slider.step}
-                              value={[selections.price?.min, selections.price?.max]}
-                              onChange={(value) => {
-                                if (Array.isArray(value)) {
-                                  const [min, max] = value;
-                                  setSelections((prev) => ({
-                                    ...prev,
-                                    price: { min, max }
-                                  }));
-                                }
-                              }}
-                              className="w-full"
-                            />
-                          </>
+                          </div>
                         )}
                       </div>
                     )}
