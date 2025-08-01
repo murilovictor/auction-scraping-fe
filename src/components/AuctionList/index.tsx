@@ -237,7 +237,7 @@ export default function PropertiesList() {
         <div className="relative">
           <Input
             type="text"
-            placeholder="Buscar por nome do imóvel..."
+            placeholder="Buscar por endereço do imóvel..."
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
             onKeyPress={handleKeyPress}
