@@ -7,14 +7,15 @@ import { useRouter } from "next/navigation";
 import { Card } from "@heroui/card";
 import { Pagination } from "@heroui/pagination";
 import { useSession } from "next-auth/react";
-import { FaHome, FaCar, FaRuler, FaMapMarkerAlt, FaSearch } from 'react-icons/fa'
+import { FaHome, FaCar, FaRuler, FaMapMarkerAlt, FaSearch, FaChevronLeft, FaChevronRight } from 'react-icons/fa'
 import { Input } from "@heroui/input";
 
 const PAGE_SIZE = 30;
 
 type Property = {
   id: string | number;
-  photo?: string;
+  photo?: string; // Mantendo para compatibilidade
+  photos?: string[]; // Novo array de fotos
   firstSalePrice: number;
   secondSalePrice: number;
   appraisalValue: number;
@@ -42,6 +43,86 @@ type Property = {
   importantObservations?: string[];
   createdAt?: string;
   updatedAt?: string;
+};
+
+// Componente do carrossel de fotos
+const PhotoCarousel = ({ photos, propertyName }: { photos: string[], propertyName?: string }) => {
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  const nextPhoto = () => {
+    setCurrentIndex((prevIndex) => (prevIndex + 1) % photos.length);
+  };
+
+  const prevPhoto = () => {
+    setCurrentIndex((prevIndex) => (prevIndex - 1 + photos.length) % photos.length);
+  };
+
+  const goToPhoto = (index: number) => {
+    setCurrentIndex(index);
+  };
+
+  if (!photos || photos.length === 0) {
+    return (
+      <div className="text-gray-400 flex items-center justify-center h-full">
+        Sem foto
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative w-full h-full group">
+      {/* Foto atual */}
+      <img 
+        src={photos[currentIndex]} 
+        alt={`Foto ${currentIndex + 1} do imóvel ${propertyName || ''}`} 
+        className="object-cover w-full h-full transition-opacity duration-300" 
+      />
+      
+      {/* Indicadores de navegação */}
+      {photos.length > 1 && (
+        <>
+          {/* Botão anterior */}
+          <button
+            onClick={prevPhoto}
+            className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10"
+            aria-label="Foto anterior"
+          >
+            <FaChevronLeft className="w-4 h-4" />
+          </button>
+          
+          {/* Botão próximo */}
+          <button
+            onClick={nextPhoto}
+            className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10"
+            aria-label="Próxima foto"
+          >
+            <FaChevronRight className="w-4 h-4" />
+          </button>
+          
+          {/* Indicadores de pontos */}
+          <div className="absolute bottom-2 right-1/2 -translate-x-1/2 flex gap-1 z-10 ml-5">
+            {photos.map((_, index) => (
+              <button
+                key={index}
+                onClick={() => goToPhoto(index)}
+                className={`w-2 h-2 rounded-full transition-all duration-200 ${
+                  index === currentIndex 
+                    ? 'bg-white scale-125' 
+                    : 'bg-white/50 hover:bg-white/75'
+                }`}
+                aria-label={`Ir para foto ${index + 1}`}
+              />
+            ))}
+          </div>
+          
+          {/* Contador de fotos */}
+          <div className="absolute bottom-2 right-2 bg-black/50 text-white text-xs px-2 py-1 rounded-md z-10">
+            {currentIndex + 1} / {photos.length}
+          </div>
+        </>
+      )}
+    </div>
+  );
 };
 
 export default function PropertiesList() {
@@ -367,10 +448,10 @@ export default function PropertiesList() {
                     </svg>
                   </button>
 
-                  {item.photo ? (
-                    <img src={item.photo} alt="Foto do imóvel" className="object-cover w-full h-full" />
+                  {item.photos && item.photos.length > 0 ? (
+                    <PhotoCarousel photos={item.photos} propertyName={item.propertyName} />
                   ) : (
-                    <div className="text-gray-400">Sem foto</div>
+                    <img src={"/images/property-not-available.png"} alt="Foto do imóvel não disponível" className="object-cover w-full h-full" />
                   )}
                 </div>
                 <div className="flex-1 flex flex-col gap-2 p-4">
