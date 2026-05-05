@@ -117,6 +117,14 @@ export const buildQueryString = (filters: Selections, filterConfig: FilterConfig
     }
   }
 
+  // Radio genérico (ex.: available) — sort já foi tratado acima
+  filterConfig.forEach((cfg) => {
+    if (cfg.type !== "radio" || cfg.key === "sort") return;
+    const v = filters[cfg.key];
+    if (v === undefined || v === null || v === "") return;
+    params.set(cfg.key, String(v));
+  });
+
   const query = params.toString();
   const query2 = decodeURIComponent(query);
   return query2 ? `${query2}` : "";
@@ -344,7 +352,9 @@ const FilterBar: React.FC<{
         );
       } else {
         const config = filterConfig.find((f) => f.key === key)!;
-        const opt = config?.options && config?.options?.find((o: any) => o.value === val);
+        const opt =
+          config?.options &&
+          config?.options?.find((o: any) => String(o.value) === String(val));
         if (opt) {
           chips.push(
             <Chip 
@@ -487,8 +497,11 @@ const FilterBar: React.FC<{
                     <div className="font-medium mb-3">{cfg.title}</div>
                     {cfg.type === "radio" && (
                       <RadioGroup
-                        defaultValue={cfg?.defaultValue}
-                        value={selections[cfg.key]}
+                        value={
+                          selections[cfg.key] !== undefined && selections[cfg.key] !== null && selections[cfg.key] !== ""
+                            ? String(selections[cfg.key])
+                            : String(cfg.defaultValue ?? "")
+                        }
                         onValueChange={(val) =>
                           setSelections((prev) => ({ ...prev, [cfg.key]: val }))
                         }
@@ -499,7 +512,6 @@ const FilterBar: React.FC<{
                         ))}
                       </RadioGroup>
                     )}
-
                     {cfg.type === "checkbox" && (
                       <CheckboxGroup
                         value={selections[cfg.key]}
