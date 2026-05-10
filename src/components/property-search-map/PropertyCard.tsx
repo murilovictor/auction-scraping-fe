@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { memo } from "react";
+import { shouldBypassNextImageOptimization } from "@/lib/shouldBypassNextImageOptimization";
 import type { PropertyMapSearchItem } from "@/types/property-map-search";
 
 const fmtMoney = (n: number) =>
@@ -89,6 +90,7 @@ function PropertyCardInner({
           fill
           className="object-cover transition-transform duration-300 group-hover:scale-105"
           sizes="112px"
+          unoptimized={shouldBypassNextImageOptimization(p.thumbnail)}
         />
         {p.desconto != null && p.desconto > 0 ? (
           <span className="absolute left-1 top-1 rounded-md bg-emerald-600 px-1.5 py-0.5 text-[10px] font-bold text-white">

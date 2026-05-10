@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { memo } from "react";
+import { shouldBypassNextImageOptimization } from "@/lib/shouldBypassNextImageOptimization";
 import type { PropertyMapSearchItem } from "@/types/property-map-search";
 
 const fmtMoney = (n: number) =>
@@ -30,7 +31,14 @@ function PropertyMapPreviewInner({
     <div className="pointer-events-auto z-[6] w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-3 shadow-2xl transition-opacity duration-200">
       <div className="flex gap-3">
         <div className="relative h-20 w-24 shrink-0 overflow-hidden rounded-lg bg-slate-100">
-          <Image src={p.thumbnail} alt="" fill className="object-cover" sizes="96px" />
+          <Image
+            src={p.thumbnail}
+            alt=""
+            fill
+            className="object-cover"
+            sizes="96px"
+            unoptimized={shouldBypassNextImageOptimization(p.thumbnail)}
+          />
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-2">
