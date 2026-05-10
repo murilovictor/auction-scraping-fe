@@ -10,6 +10,8 @@
     "migrate": "prisma migrate deploy"
   },
   "dependencies": {
+    "@googlemaps/markerclusterer": "^2.5.3",
+    "@react-google-maps/api": "^2.20.6",
     "@auth/prisma-adapter": "^1.5.0",
     "@heroui/button": "^2.2.19",
     "@heroui/drawer": "^2.2.16",
@@ -43,6 +45,7 @@
     "@types/bcrypt": "^5.0.2",
     "@types/node": "^20.11.27",
     "@types/nodemailer": "^6.4.14",
+    "@types/google.maps": "^3.58.1",
     "@types/prismjs": "^1.26.3",
     "@types/react": "19.1.0",
     "@types/react-dom": "19.1.2",

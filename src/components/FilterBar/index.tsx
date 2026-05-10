@@ -31,6 +31,22 @@ declare type FilterConfig = FilterConfigItem[];
 type FilterKey = string;
 type Selections = Record<FilterKey, any>;
 
+type SliderRange = { min: number; max: number };
+
+const sliderBounds = (cfg: FilterConfigItem): SliderRange => ({
+  min: Number(cfg.slider?.min ?? 0),
+  max: Number(cfg.slider?.max ?? (cfg.key === "discount" ? 100 : Number.MAX_SAFE_INTEGER)),
+});
+
+const sliderAtDefault = (val: SliderRange | undefined, cfg: FilterConfigItem): boolean => {
+  if (!val || val.min === undefined || val.max === undefined) return true;
+  const { min: smin, max: smax } = sliderBounds(cfg);
+  return Number(val.min) === smin && Number(val.max) === smax;
+};
+
+const isCurrencySliderKey = (key: string): boolean =>
+  key === "auctionPrice" || key === "appraisal";
+
 export const getInitialSelections = (filterConfig: FilterConfig): Selections => {
   const initial: any = {};
   if (!filterConfig) return initial;
@@ -54,28 +70,19 @@ export const buildQueryString = (filters: Selections, filterConfig: FilterConfig
   if (filters.expensePaymentRules && filters.expensePaymentRules.length) {
     params.set("expensePaymentRules", filters.expensePaymentRules.join(","));
   }
-  
-  if (filters.price) {
-    params.set("priceMin", String(filters.price.min));
-    params.set("priceMax", String(filters.price.max));
-  }
 
   if (filters.propertyType && filters.propertyType.length) {
     params.set("propertyType", filters.propertyType.join(","));
   }
 
-  // Descontos
-  if (filters.discounts) {
-    const { discount1, discount2 } = filters.discounts;
-    if (discount1 && (discount1.min !== 0 || discount1.max !== 100)) {
-      params.set("firstDiscountMin", String(discount1.min));
-      params.set("firstDiscountMax", String(discount1.max));
-    }
-    if (discount2 && (discount2.min !== 0 || discount2.max !== 100)) {
-      params.set("secondDiscountMin", String(discount2.min));
-      params.set("secondDiscountMax", String(discount2.max));
-    }
-  }
+  filterConfig.forEach((cfg) => {
+    if (cfg.type !== "slider") return;
+    const val = filters[cfg.key] as SliderRange | undefined;
+    if (!val || val.min === undefined || val.max === undefined) return;
+    if (sliderAtDefault(val, cfg)) return;
+    params.set(`${cfg.key}Min`, String(val.min));
+    params.set(`${cfg.key}Max`, String(val.max));
+  });
 
   // Localização
   if (filters.location) {
@@ -131,48 +138,87 @@ export const buildQueryString = (filters: Selections, filterConfig: FilterConfig
 };
 
 const parseQueryStringToSelections = (qs: string, filterConfig: FilterConfig): Selections => {
+  const base = getInitialSelections(filterConfig) as Selections;
+  if (!qs.trim()) return base;
+
   const params = new URLSearchParams(qs);
-  const selections: any = {};
-  params.forEach((value, key) => {
-    if (["propertyType", "modality", "paymentConditions", "expensePaymentRules"].includes(key)) {
-      selections[key] = value.split(",");
-    } else if (key === "priceMin" || key === "priceMax") {
-      selections.price = selections.price || {};
-      if (key === "priceMin") selections.price.min = Number(value);
-      if (key === "priceMax") selections.price.max = Number(value);
-    } else if (
-      ["firstDiscountMin", "firstDiscountMax", "secondDiscountMin", "secondDiscountMax"].includes(key)
-    ) {
-      selections.discounts = selections.discounts || {
-        discount1: { min: 0, max: 100 },
-        discount2: { min: 0, max: 100 },
-      };
-      if (key === "firstDiscountMin") selections.discounts.discount1.min = Number(value);
-      if (key === "firstDiscountMax") selections.discounts.discount1.max = Number(value);
-      if (key === "secondDiscountMin") selections.discounts.discount2.min = Number(value);
-      if (key === "secondDiscountMax") selections.discounts.discount2.max = Number(value);
-    } else if (key === "state" || key === "city" || key === "neighborhood") {
-      selections.location = selections.location || {};
-      selections.location[key] = value;
-    } else {
-      selections[key] = value;
+  const sliderMinMaxKeys = new Set<string>();
+  filterConfig.forEach((c) => {
+    if (c.type === "slider") {
+      sliderMinMaxKeys.add(`${c.key}Min`);
+      sliderMinMaxKeys.add(`${c.key}Max`);
     }
   });
-  // Garante que discounts, discount1 e discount2 sempre existam
-  if (!selections.discounts) {
-    selections.discounts = {
-      discount1: { min: 0, max: 100 },
-      discount2: { min: 0, max: 100 }
+
+  const legacyQueryKeys = new Set([
+    "priceMin",
+    "priceMax",
+    "firstDiscountMin",
+    "firstDiscountMax",
+    "secondDiscountMin",
+    "secondDiscountMax",
+    "discountPercentMin",
+    "discountPercentMax",
+  ]);
+
+  params.forEach((value, key) => {
+    if (sliderMinMaxKeys.has(key) || legacyQueryKeys.has(key) || key === "sort") return;
+    if (["propertyType", "modality", "paymentConditions", "expensePaymentRules"].includes(key)) {
+      base[key] = value.split(",");
+    } else if (key === "state" || key === "city" || key === "neighborhood") {
+      base.location = base.location || {};
+      base.location[key] = value;
+    } else {
+      base[key] = value;
+    }
+  });
+
+  const sorts = params.getAll("sort");
+  if (sorts.length > 0) {
+    const sortCfg = filterConfig.find((f) => f.key === "sort");
+    const sortOptions = sortCfg?.options as SortOption[] | undefined;
+    const toOptionValue = (raw: string) => {
+      const opt = sortOptions?.find((o) => `${o.sortField}:${o.sortOrder}` === raw);
+      return opt?.value ?? raw;
     };
-  } else {
-    if (!selections.discounts.discount1) {
-      selections.discounts.discount1 = { min: 0, max: 100 };
-    }
-    if (!selections.discounts.discount2) {
-      selections.discounts.discount2 = { min: 0, max: 100 };
-    }
+    const values = sorts.map(toOptionValue);
+    base.sort = values.length === 1 ? values[0] : values;
   }
-  return selections;
+
+  filterConfig.forEach((cfg) => {
+    if (cfg.type !== "slider") return;
+    const mn = `${cfg.key}Min`;
+    const mx = `${cfg.key}Max`;
+    if (params.has(mn) && params.has(mx)) {
+      base[cfg.key] = { min: Number(params.get(mn)), max: Number(params.get(mx)) };
+    }
+  });
+
+  if (
+    filterConfig.some((c) => c.key === "appraisal" && c.type === "slider") &&
+    params.has("priceMin") &&
+    params.has("priceMax") &&
+    !params.has("appraisalMin")
+  ) {
+    base.appraisal = {
+      min: Number(params.get("priceMin")),
+      max: Number(params.get("priceMax")),
+    };
+  }
+
+  if (
+    filterConfig.some((c) => c.key === "discount" && c.type === "slider") &&
+    params.has("discountPercentMin") &&
+    params.has("discountPercentMax") &&
+    !params.has("discountMin")
+  ) {
+    base.discount = {
+      min: Number(params.get("discountPercentMin")),
+      max: Number(params.get("discountPercentMax")),
+    };
+  }
+
+  return base;
 };
 
 // Funções para formatação de moeda
@@ -185,23 +231,6 @@ const formatCurrencyBR = (value: number): string => {
   }).format(value);
 };
 
-const parseCurrencyBR = (value: string): number => {
-  // Remove R$, espaços, pontos e converte vírgula para ponto
-  const cleanValue = value.replace(/R\$\s*/g, '').replace(/\./g, '').replace(',', '.');
-  const parsed = parseFloat(cleanValue);
-  return isNaN(parsed) ? 0 : parsed;
-};
-
-const formatCurrencyInput = (value: string): string => {
-  // Remove tudo exceto números
-  const numbers = value.replace(/\D/g, '');
-  if (numbers === '') return '';
-  
-  // Converte para número e formata
-  const number = parseInt(numbers, 10);
-  return formatCurrencyBR(number);
-};
-
 // Função para formatação em tempo real
 const formatCurrencyRealTime = (inputValue: string): string => {
   // Remove formatação existente
@@ -212,12 +241,6 @@ const formatCurrencyRealTime = (inputValue: string): string => {
   
   const numericValue = parseInt(numbers, 10);
   return formatCurrencyBR(numericValue);
-};
-
-// Função para permitir digitação livre
-const allowFreeTyping = (value: string): string => {
-  // Remove apenas R$ e espaços, mantém números, pontos e vírgulas
-  return value.replace(/R\$\s*/g, '');
 };
 
 const FilterBar: React.FC<{ 
@@ -235,7 +258,7 @@ const FilterBar: React.FC<{
   const [isOpen, setIsOpen] = useState(false);
   const [selections, setSelections] = useState<Selections>({});
   const [applied, setApplied] = useState<Selections>({});
-  const [priceInputs, setPriceInputs] = useState({ min: "", max: "" });
+  const [currencyInputs, setCurrencyInputs] = useState<Record<string, { min: string; max: string }>>({});
 
   // Carrega os filtros do backend
   useEffect(() => {
@@ -252,14 +275,11 @@ const FilterBar: React.FC<{
   // Sincroniza selections/applied sempre que initialQueryString mudar
   useEffect(() => {
     if (!filterConfig) return;
-    const selectionsFromQuery = initialQueryString
-      ? parseQueryStringToSelections(initialQueryString, filterConfig)
-      : undefined;
-    if (selectionsFromQuery && Object.keys(selectionsFromQuery).length > 0) {
+    if (initialQueryString && initialQueryString.trim()) {
+      const selectionsFromQuery = parseQueryStringToSelections(initialQueryString, filterConfig);
       setSelections(selectionsFromQuery);
       setApplied(selectionsFromQuery);
     } else {
-      // Se não houver filtros na query, reseta para o default
       const initial = getInitialSelections(filterConfig);
       setSelections(initial);
       setApplied(initial);
@@ -268,15 +288,19 @@ const FilterBar: React.FC<{
 
   // Sincroniza selections com applied ao abrir o painel de filtros
   useEffect(() => {
-    if (isOpen) {
-      setSelections(applied);
-      // Sincroniza inputs de preço
-      setPriceInputs({
-        min: applied.price?.min ? formatCurrencyBR(applied.price.min) : "",
-        max: applied.price?.max ? formatCurrencyBR(applied.price.max) : ""
-      });
-    }
-  }, [isOpen, applied]);
+    if (!isOpen || !filterConfig) return;
+    setSelections(applied);
+    const next: Record<string, { min: string; max: string }> = {};
+    filterConfig.forEach((cfg) => {
+      if (cfg.type !== "slider" || !cfg.slider || !isCurrencySliderKey(cfg.key)) return;
+      const v = applied[cfg.key] as SliderRange | undefined;
+      next[cfg.key] = {
+        min: v?.min != null ? formatCurrencyBR(Number(v.min)) : "",
+        max: v?.max != null ? formatCurrencyBR(Number(v.max)) : "",
+      };
+    });
+    setCurrencyInputs(next);
+  }, [isOpen, applied, filterConfig]);
 
   // Só renderiza se filterConfig estiver carregado
   if (!filterConfig) {
@@ -312,7 +336,6 @@ const FilterBar: React.FC<{
   // renderiza chips de filtros aplicados
   const renderChips = () => {
     const chips: React.ReactNode[] = [];
-    // Garante que sort (ordenacao) venha primeiro
     const keys = Object.keys(applied) as FilterKey[];
     const orderedKeys = [
       ...keys.filter((k) => k === "sort"),
@@ -320,20 +343,25 @@ const FilterBar: React.FC<{
     ];
     for (const key of orderedKeys) {
       const val = applied[key];
+      const cfg = filterConfig.find((f) => f.key === key);
+
+      if (cfg?.type === "slider" && val && typeof val === "object" && "min" in val && "max" in val) {
+        if (sliderAtDefault(val as SliderRange, cfg)) continue;
+        const range = val as SliderRange;
+        chips.push(
+          <Chip key={key} onClose={() => clearFilter(key)} className="text-sm">
+            {cfg.label}:{" "}
+            {key === "discount"
+              ? `${range.min}% – ${range.max}%`
+              : `${formatCurrencyBR(range.min)} – ${formatCurrencyBR(range.max)}`}
+          </Chip>
+        );
+        continue;
+      }
+
       if (!val || (Array.isArray(val) && val.length === 0)) continue;
 
-      if (key === "price") {
-        chips.push(
-          <Chip 
-            key={key} 
-            onClose={() => clearFilter(key)}
-            className="text-sm"
-          >
-            Preço: {formatCurrencyBR(val.min)} – {formatCurrencyBR(val.max)}
-          </Chip>,
-        );
-      }
-      else if (Array.isArray(val)) {
+      if (Array.isArray(val)) {
         const config = filterConfig.find((f) => f.key === key)!;
         const labels = val
           .map((item: string) => {
@@ -363,44 +391,6 @@ const FilterBar: React.FC<{
               className="text-sm"
             >
               {config.label}: {opt.label}
-            </Chip>
-          );
-        }
-      }
-
-      // Chips para descontos
-      if (key === "discounts") {
-        const val1 = val.discount1;
-        const val2 = val.discount2;
-        if (val1.min !== 0 || val1.max !== 100) {
-          chips.push(
-            <Chip
-              key={key + "-1"}
-              onClose={() => {
-                const newDiscounts = { ...applied.discounts, discount1: { min: 0, max: 100 } };
-                setSelections(prev => ({ ...prev, discounts: newDiscounts }));
-                setApplied(prev => ({ ...prev, discounts: newDiscounts }));
-                onApply && onApply(buildQueryString({ ...applied, discounts: newDiscounts }, filterConfig));
-              }}
-              className="text-sm"
-            >
-              Primeira Praça: {val1.min}% – {val1.max}%
-            </Chip>
-          );
-        }
-        if (val2.min !== 0 || val2.max !== 100) {
-          chips.push(
-            <Chip
-              key={key + "-2"}
-              onClose={() => {
-                const newDiscounts = { ...applied.discounts, discount2: { min: 0, max: 100 } };
-                setSelections(prev => ({ ...prev, discounts: newDiscounts }));
-                setApplied(prev => ({ ...prev, discounts: newDiscounts }));
-                onApply && onApply(buildQueryString({ ...applied, discounts: newDiscounts }, filterConfig));
-              }}
-              className="text-sm"
-            >
-              Segunda Praça: {val2.min}% – {val2.max}%
             </Chip>
           );
         }
@@ -526,65 +516,104 @@ const FilterBar: React.FC<{
                       </CheckboxGroup>
                     )}
 
-                    {cfg.type === "slider" && (
+                    {cfg.type === "slider" && cfg.slider && (
                       <div className="w-full">
-                        {cfg.key === "price" && cfg.slider && (
+                        {cfg.key === "discount" ? (
+                          <div className="space-y-2">
+                            <div className="flex justify-between mb-1 text-sm text-gray-600">
+                              <span>
+                                {(selections[cfg.key] as SliderRange | undefined)?.min === sliderBounds(cfg).min
+                                  ? "Sem valor mínimo"
+                                  : `${(selections[cfg.key] as SliderRange)?.min}%`}
+                              </span>
+                              <span>
+                                {(selections[cfg.key] as SliderRange | undefined)?.max === sliderBounds(cfg).max
+                                  ? "Sem limite definido"
+                                  : `${(selections[cfg.key] as SliderRange)?.max}%`}
+                              </span>
+                            </div>
+                            <Slider
+                              minValue={sliderBounds(cfg).min}
+                              maxValue={sliderBounds(cfg).max}
+                              step={1}
+                              value={[
+                                Number.isFinite((selections[cfg.key] as SliderRange | undefined)?.min)
+                                  ? (selections[cfg.key] as SliderRange).min
+                                  : sliderBounds(cfg).min,
+                                Number.isFinite((selections[cfg.key] as SliderRange | undefined)?.max)
+                                  ? (selections[cfg.key] as SliderRange).max
+                                  : sliderBounds(cfg).max,
+                              ]}
+                              onChange={(value) => {
+                                if (Array.isArray(value)) {
+                                  const [min, max] = value;
+                                  setSelections((prev) => ({
+                                    ...prev,
+                                    [cfg.key]: { min, max },
+                                  }));
+                                }
+                              }}
+                              className="w-full"
+                            />
+                          </div>
+                        ) : isCurrencySliderKey(cfg.key) ? (
                           <div className="space-y-4">
                             <div className="grid grid-cols-2 gap-4">
-                              {/* Preço Mínimo */}
                               <div>
                                 <label className="block mb-1 text-sm font-medium text-gray-700">
-                                  Preço Mínimo
+                                  Mínimo
                                 </label>
                                 <input
                                   type="text"
                                   placeholder="R$ 0,00"
-                                  value={priceInputs.min}
+                                  value={currencyInputs[cfg.key]?.min ?? ""}
                                   onChange={(e) => {
                                     const formattedValue = formatCurrencyRealTime(e.target.value);
-                                    setPriceInputs(prev => ({ ...prev, min: formattedValue }));
+                                    setCurrencyInputs((prev) => ({
+                                      ...prev,
+                                      [cfg.key]: { min: formattedValue, max: prev[cfg.key]?.max ?? "" },
+                                    }));
                                   }}
                                   onBlur={(e) => {
-                                    // Converte para número quando sai do campo
-                                    const numbers = e.target.value.replace(/\D/g, '');
-                                    const numericValue = numbers ? parseInt(numbers, 10) : 0;
-                                    
+                                    const numbers = e.target.value.replace(/\D/g, "");
+                                    const numericValue = numbers ? parseInt(numbers, 10) : sliderBounds(cfg).min;
+                                    const prevRange = (selections[cfg.key] as SliderRange | undefined) || sliderBounds(cfg);
                                     setSelections((prev) => ({
                                       ...prev,
-                                      price: {
+                                      [cfg.key]: {
                                         min: numericValue,
-                                        max: prev.price?.max || cfg.slider.max
-                                      }
+                                        max: prevRange.max ?? sliderBounds(cfg).max,
+                                      },
                                     }));
                                   }}
                                   className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                                 />
                               </div>
-                              
-                              {/* Preço Máximo */}
                               <div>
                                 <label className="block mb-1 text-sm font-medium text-gray-700">
-                                  Preço Máximo
+                                  Máximo
                                 </label>
                                 <input
                                   type="text"
                                   placeholder="R$ 0,00"
-                                  value={priceInputs.max}
+                                  value={currencyInputs[cfg.key]?.max ?? ""}
                                   onChange={(e) => {
                                     const formattedValue = formatCurrencyRealTime(e.target.value);
-                                    setPriceInputs(prev => ({ ...prev, max: formattedValue }));
+                                    setCurrencyInputs((prev) => ({
+                                      ...prev,
+                                      [cfg.key]: { min: prev[cfg.key]?.min ?? "", max: formattedValue },
+                                    }));
                                   }}
                                   onBlur={(e) => {
-                                    // Converte para número quando sai do campo
-                                    const numbers = e.target.value.replace(/\D/g, '');
-                                    const numericValue = numbers ? parseInt(numbers, 10) : 0;
-                                    
+                                    const numbers = e.target.value.replace(/\D/g, "");
+                                    const numericValue = numbers ? parseInt(numbers, 10) : sliderBounds(cfg).max;
+                                    const prevRange = (selections[cfg.key] as SliderRange | undefined) || sliderBounds(cfg);
                                     setSelections((prev) => ({
                                       ...prev,
-                                      price: {
-                                        min: prev.price?.min || cfg.slider.min,
-                                        max: numericValue
-                                      }
+                                      [cfg.key]: {
+                                        min: prevRange.min ?? sliderBounds(cfg).min,
+                                        max: numericValue,
+                                      },
                                     }));
                                   }}
                                   className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
@@ -592,90 +621,37 @@ const FilterBar: React.FC<{
                               </div>
                             </div>
                           </div>
+                        ) : (
+                          <div className="space-y-2">
+                            <div className="flex justify-between mb-1 text-sm text-gray-600">
+                              <span>{(selections[cfg.key] as SliderRange | undefined)?.min ?? sliderBounds(cfg).min}</span>
+                              <span>{(selections[cfg.key] as SliderRange | undefined)?.max ?? sliderBounds(cfg).max}</span>
+                            </div>
+                            <Slider
+                              minValue={sliderBounds(cfg).min}
+                              maxValue={sliderBounds(cfg).max}
+                              step={cfg.slider?.step ?? 1}
+                              value={[
+                                Number.isFinite((selections[cfg.key] as SliderRange | undefined)?.min)
+                                  ? (selections[cfg.key] as SliderRange).min
+                                  : sliderBounds(cfg).min,
+                                Number.isFinite((selections[cfg.key] as SliderRange | undefined)?.max)
+                                  ? (selections[cfg.key] as SliderRange).max
+                                  : sliderBounds(cfg).max,
+                              ]}
+                              onChange={(value) => {
+                                if (Array.isArray(value)) {
+                                  const [min, max] = value;
+                                  setSelections((prev) => ({
+                                    ...prev,
+                                    [cfg.key]: { min, max },
+                                  }));
+                                }
+                              }}
+                              className="w-full"
+                            />
+                          </div>
                         )}
-                      </div>
-                    )}
-
-                    {cfg.type === "custom" && (
-                      <div className="space-y-4">
-                        {/* Desconto 1 */}
-                        <div>
-                          <div className="mb-1 text-sm text-gray-600 font-medium">Primeira Praça</div>
-                          <div className="flex justify-between mb-1 text-sm text-gray-600">
-                            <span>
-                              {selections.discounts?.discount1?.min === 0
-                                ? "Sem valor mínimo"
-                                : `${selections.discounts?.discount1?.min}%`}
-                            </span>
-                            <span>
-                              {selections.discounts?.discount1?.max === 100
-                                ? "Sem limite definido"
-                                : `${selections.discounts?.discount1?.max}%`}
-                            </span>
-                          </div>
-                          <Slider
-                            minValue={0}
-                            maxValue={100}
-                            step={1}
-                            value={[
-                              Number.isFinite(selections.discounts?.discount1?.min) ? selections.discounts?.discount1.min : 0,
-                              Number.isFinite(selections.discounts?.discount1?.max) ? selections.discounts.discount1.max : 100,
-                            ]}
-                            onChange={(value) => {
-                              if (Array.isArray(value)) {
-                                const [min, max] = value;
-                                setSelections((prev) => ({
-                                  ...prev,
-                                  discounts: {
-                                    ...prev.discounts,
-                                    discount1: { min, max },
-                                    discount2: prev.discounts?.discount2 || { min: 0, max: 100 },
-                                  },
-                                }));
-                              }
-                            }}
-                            className="w-full"
-                          />
-                        </div>
-                        {/* Desconto 2 */}
-                        <div>
-                          <div className="mb-1 text-sm text-gray-600 font-medium">Segunda Praça</div>
-                          <div className="flex justify-between mb-1 text-sm text-gray-600">
-                            <span>
-                              {selections.discounts?.discount2?.min === 0
-                                ? "Sem valor mínimo"
-                                : `${selections.discounts?.discount2?.min}%`}
-                            </span>
-                            <span>
-                              {selections.discounts?.discount2?.max === 100
-                                ? "Sem limite definido"
-                                : `${selections.discounts?.discount2?.max}%`}
-                            </span>
-                          </div>
-                          <Slider
-                            minValue={0}
-                            maxValue={100}
-                            step={1}
-                            value={[
-                              Number.isFinite(selections.discounts?.discount2?.min) ? selections.discounts?.discount2?.min : 0,
-                              Number.isFinite(selections.discounts?.discount2?.max) ? selections.discounts?.discount2?.max : 100,
-                            ]}
-                            onChange={(value) => {
-                              if (Array.isArray(value)) {
-                                const [min, max] = value;
-                                setSelections((prev) => ({
-                                  ...prev,
-                                  discounts: {
-                                    ...prev.discounts,
-                                    discount1: prev.discounts?.discount1 || { min: 0, max: 100 },
-                                    discount2: { min, max },
-                                  },
-                                }));
-                              }
-                            }}
-                            className="w-full"
-                          />
-                        </div>
                       </div>
                     )}
 
@@ -771,10 +747,8 @@ const FilterBar: React.FC<{
         <div className="flex flex-wrap gap-1.5 flex-1 border border-gray-200 rounded-md px-2 py-2 bg-white/50 min-h-[40px] overflow-x-auto">
           {renderChips()}
         </div>
-        {Object.keys(applied).some((k) => {
-          const v = applied[k as FilterKey];
-          return Array.isArray(v) ? v.length > 0 : Boolean(v);
-        }) && (
+        {buildQueryString(applied, filterConfig) !==
+          buildQueryString(getInitialSelections(filterConfig), filterConfig) && (
           <Button
             variant="ghost"
             aria-label="Limpar filtros"

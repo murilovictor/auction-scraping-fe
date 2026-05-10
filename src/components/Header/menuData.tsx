@@ -14,6 +14,13 @@ const menuData: Menu[] = [
     path: "/auction-list",
     newTab: true,
     secure: true,
-  }
+  },
+  {
+    id: 3,
+    title: "Busca no mapa",
+    path: "/property-search-map",
+    newTab: false,
+    secure: false,
+  },
 ];
 export default menuData;
