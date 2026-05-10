@@ -22,7 +22,7 @@ export function spreadOverlappingPins(items: PropertyMapSearchItem[]): PropertyM
 
   const out: PropertyMapSearchItem[] = [];
 
-  for (const group of buckets.values()) {
+  for (const group of Array.from(buckets.values())) {
     if (group.length <= 1) {
       out.push(group[0]);
       continue;
