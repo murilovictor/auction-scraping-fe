@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { memo } from "react";
+import type { MapFilterSelectOptions } from "@/types/property-filters-config";
 import type { QuickFiltersState, ViewMode } from "@/types/property-map-search";
 import FiltersBar from "./FiltersBar";
 
@@ -11,6 +12,8 @@ export type SearchHeaderProps = {
   onSearchSubmit: () => void;
   quickFilters: QuickFiltersState;
   onQuickFiltersChange: (q: QuickFiltersState) => void;
+  mapFilterSelects: MapFilterSelectOptions;
+  filtersLoading?: boolean;
   viewMode: ViewMode;
   onViewModeChange: (m: ViewMode) => void;
 };
@@ -21,6 +24,8 @@ function SearchHeaderInner({
   onSearchSubmit,
   quickFilters,
   onQuickFiltersChange,
+  mapFilterSelects,
+  filtersLoading,
   viewMode,
   onViewModeChange,
 }: SearchHeaderProps) {
@@ -28,15 +33,6 @@ function SearchHeaderInner({
     <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/95 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-white/80">
       <div className="mx-auto flex max-w-[1920px] flex-col gap-3 px-3 py-3 sm:px-4 lg:px-6">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:gap-4">
-          <Link
-            href="/"
-            className="flex shrink-0 items-center gap-2 text-lg font-bold tracking-tight text-slate-900"
-          >
-            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-sky-600 text-sm font-black text-white">
-              L
-            </span>
-            <span className="hidden sm:inline">Leilão Imóveis</span>
-          </Link>
           <div className="flex min-w-0 flex-1 items-center gap-2">
             <div className="relative min-w-0 flex-1">
               <input
@@ -89,7 +85,12 @@ function SearchHeaderInner({
           </div>
         </div>
         <div className="overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <FiltersBar value={quickFilters} onChange={onQuickFiltersChange} />
+          <FiltersBar
+            value={quickFilters}
+            onChange={onQuickFiltersChange}
+            filterSelects={mapFilterSelects}
+            filtersLoading={filtersLoading}
+          />
         </div>
       </div>
     </header>

@@ -7,7 +7,10 @@ import toast from "react-hot-toast";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useDebouncedCallback } from "@/hooks/useDebouncedCallback";
 import { useMapListSync } from "@/hooks/useMapListSync";
+import { fetchPropertyFiltersConfig } from "@/services/propertyFiltersConfigService";
 import { fetchMapProperties, setPropertyFavorite } from "@/services/propertyMapSearchService";
+import { extractMapFilterSelects } from "@/types/property-filters-config";
+import type { PropertyFiltersConfig } from "@/types/property-filters-config";
 import type {
   LatLngLiteral,
   MapBoundsLiteral,
@@ -28,7 +31,9 @@ const defaultQuick: QuickFiltersState = {
   precoMax: "",
   tipo: "",
   descontoMin: "",
-  aceitaFinanciamento: "",
+  formaPagamento: "",
+  modalidade: "",
+  tipoLeilao: "",
 };
 
 function boundsKey(b: MapBoundsLiteral) {
@@ -54,6 +59,33 @@ export default function PropertySearchMapShell() {
   const [reloadKey, setReloadKey] = useState(0);
   const [quickFilters, setQuickFilters] = useState<QuickFiltersState>(defaultQuick);
   const debouncedQuick = useDebounce(quickFilters, 280);
+  const [filterConfig, setFilterConfig] = useState<PropertyFiltersConfig | null>(null);
+  const [filtersLoading, setFiltersLoading] = useState(true);
+
+  const mapFilterSelects = useMemo(() => extractMapFilterSelects(filterConfig), [filterConfig]);
+  const saleTypeQueryKey = mapFilterSelects.saleTypeFilter?.queryKey ?? null;
+
+  useEffect(() => {
+    let cancelled = false;
+    setFiltersLoading(true);
+    void fetchPropertyFiltersConfig()
+      .then((data) => {
+        if (!cancelled) setFilterConfig(data);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          toast.error("Não foi possível carregar os filtros.");
+          setFilterConfig(null);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setFiltersLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [searchText, setSearchText] = useState("");
   const [searchApplied, setSearchApplied] = useState("");
@@ -83,6 +115,7 @@ export default function PropertySearchMapShell() {
         quick: debouncedQuick,
         q: searchApplied,
         bounds: queryBoundsRef.current ?? undefined,
+        saleTypeQueryKey,
       });
       setListItems(items);
       setTotalCount(total);
@@ -94,7 +127,7 @@ export default function PropertySearchMapShell() {
     } finally {
       setLoadingList(false);
     }
-  }, [userId, debouncedQuick, searchApplied, reloadKey]);
+  }, [userId, debouncedQuick, searchApplied, reloadKey, saleTypeQueryKey]);
 
   useEffect(() => {
     void loadList();
@@ -126,6 +159,7 @@ export default function PropertySearchMapShell() {
         quick: debouncedQuick,
         q: searchApplied,
         bounds: pendingPayload.bounds,
+        saleTypeQueryKey,
       });
       setListItems(items);
       setTotalCount(total);
@@ -194,7 +228,7 @@ export default function PropertySearchMapShell() {
         onSearchThisArea={handleSearchThisArea}
       />
       {selectedProperty ? (
-        <div className="pointer-events-none absolute bottom-24 left-1/2 z-[6] flex w-[calc(100%-1rem)] max-w-sm -translate-x-1/2 justify-center">
+        <div className="pointer-events-none absolute bottom-24 left-1/2 z-[6] flex w-[calc(100%-1rem)] max-w-[23rem] -translate-x-1/2 justify-center">
           <PropertyMapPreview
             property={selectedProperty}
             isFavorite={!!selectedProperty.isFavorite}
@@ -254,6 +288,8 @@ export default function PropertySearchMapShell() {
         onSearchSubmit={() => setSearchApplied(searchText)}
         quickFilters={quickFilters}
         onQuickFiltersChange={setQuickFilters}
+        mapFilterSelects={mapFilterSelects}
+        filtersLoading={filtersLoading}
         viewMode={viewMode}
         onViewModeChange={setViewMode}
       />

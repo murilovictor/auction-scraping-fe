@@ -53,12 +53,28 @@ export function mapApiPropertyToMapItem(p: PropertyApi): PropertyMapSearchItem |
   if (typeof d1 === "number" && !Number.isNaN(d1)) desconto = d1;
   else if (typeof d2 === "number" && !Number.isNaN(d2)) desconto = d2;
 
+  const normDate = (s?: string) => {
+    const t = s?.trim();
+    return t ? t : null;
+  };
+  const precoPrimeiroLeilao =
+    typeof p.firstSalePrice === "number" && p.firstSalePrice > 0 ? p.firstSalePrice : null;
+  const precoSegundoLeilao =
+    typeof p.secondSalePrice === "number" && p.secondSalePrice > 0 ? p.secondSalePrice : null;
+  const descontoPrimeiroLeilao =
+    typeof d1 === "number" && !Number.isNaN(d1) ? d1 : null;
+  const descontoSegundoLeilao =
+    typeof d2 === "number" && !Number.isNaN(d2) ? d2 : null;
+
   return {
     id: String(p.id),
     latitude: lat,
     longitude: lng,
     titulo: p.propertyName ?? "(Sem título)",
-    endereco: (p.address ?? [p.neighborhood, p.city, p.state].filter(Boolean).join(", ")) || "",
+    endereco: p.address?.trim() || "",
+    bairro: p.neighborhood?.trim() || undefined,
+    cidade: p.city?.trim() || undefined,
+    estado: p.state?.trim() || undefined,
     preco,
     desconto,
     thumbnail: thumb,
@@ -71,6 +87,27 @@ export function mapApiPropertyToMapItem(p: PropertyApi): PropertyMapSearchItem |
       return resolveMediaUrl(raw) || undefined;
     })(),
     isFavorite: !!p.isFavorite,
+    precoPrimeiroLeilao,
+    precoSegundoLeilao,
+    dataPrimeiroLeilao: normDate(p.firstSaleDate),
+    dataSegundoLeilao: normDate(p.secondSaleDate),
+    descontoPrimeiroLeilao,
+    descontoSegundoLeilao,
+    condicoesPagamento: (p.paymentConditions ?? []).map(String),
+    modalidade: p.modality?.trim() || undefined,
+    saleType: p.saleType?.trim() || undefined,
+    privateArea:
+      typeof p.privateArea === "number" && !Number.isNaN(p.privateArea) && p.privateArea > 0
+        ? p.privateArea
+        : undefined,
+    rooms:
+      typeof p.rooms === "number" && !Number.isNaN(p.rooms) && p.rooms > 0 ? p.rooms : undefined,
+    garageSpaces:
+      typeof p.garageSpaces === "number" &&
+      !Number.isNaN(p.garageSpaces) &&
+      p.garageSpaces > 0
+        ? p.garageSpaces
+        : undefined,
   };
 }
 
@@ -104,11 +141,17 @@ function appendBounds(params: URLSearchParams, b: MapBoundsLiteral) {
   params.set("west", String(b.west));
 }
 
+export type BuildMapPropertiesQueryOpts = {
+  /** Chave de query para “tipo de leilão”, vinda do GET /api/properties/filters */
+  saleTypeQueryKey?: string | null;
+};
+
 /** Monta query string alinhada ao FilterBar + bbox opcional. */
 export function buildMapPropertiesQuery(
   quick: QuickFiltersState,
   q: string,
   bounds?: MapBoundsLiteral,
+  opts?: BuildMapPropertiesQueryOpts,
 ): URLSearchParams {
   const params = new URLSearchParams();
 
@@ -119,7 +162,7 @@ export function buildMapPropertiesQuery(
   if (!Number.isNaN(min) && min > 0) params.set("auctionPriceMin", String(min));
   if (!Number.isNaN(max) && max > 0) params.set("auctionPriceMax", String(max));
 
-  if (quick.tipo) params.set("propertyType", quick.tipo);
+  if (quick.tipo.trim()) params.set("propertyType", quick.tipo.trim());
 
   const dMin = quick.descontoMin ? Number(quick.descontoMin) : NaN;
   if (!Number.isNaN(dMin) && dMin > 0) {
@@ -129,21 +172,49 @@ export function buildMapPropertiesQuery(
 
   if (q.trim()) params.set("q", q.trim());
 
-  /** Ajuste o valor conforme o enum real do backend em `paymentConditions`. */
-  if (quick.aceitaFinanciamento === "sim") {
-    params.set("paymentConditions", "Financiamento");
+  if (quick.formaPagamento.trim()) {
+    params.set("paymentConditions", quick.formaPagamento.trim());
+  }
+  if (quick.modalidade.trim()) {
+    params.set("modality", quick.modalidade.trim());
+  }
+  const saleKey = opts?.saleTypeQueryKey?.trim();
+  if (saleKey && quick.tipoLeilao.trim()) {
+    params.set(saleKey, quick.tipoLeilao.trim());
   }
 
   return params;
 }
 
-/** Filtro client só para “não aceita financ.” se a API não tiver parâmetro negativo. */
-export function filterFinanciamentoNao(
-  items: PropertyMapSearchItem[],
-  aceita: QuickFiltersState["aceitaFinanciamento"],
-): PropertyMapSearchItem[] {
-  if (aceita === "nao") return items.filter((p) => !p.aceitaFinanciamento);
-  return items;
+function enrichMockMapItem(p: PropertyMapSearchItem): PropertyMapSearchItem {
+  const idn = Number(p.id) || 0;
+  const cond =
+    p.condicoesPagamento && p.condicoesPagamento.length > 0
+      ? p.condicoesPagamento
+      : [
+          ...(p.aceitaFinanciamento ? ["Financiamento"] : []),
+          ...(idn % 2 === 0 ? ["À vista"] : []),
+          ...(idn % 5 === 0 ? ["FGTS"] : []),
+          ...(idn % 4 === 0 ? ["Parcelado"] : []),
+        ];
+  const modalidade =
+    p.modalidade ??
+    (idn % 3 === 0 ? "Judicial" : idn % 3 === 1 ? "Extrajudicial" : "Extrajudicial");
+  const saleType =
+    p.saleType ??
+    (idn % 2 === 0 ? "Judicial" : idn % 2 === 1 ? "Extrajudicial" : "Judicial");
+  const privateArea = p.privateArea ?? 55 + (idn % 12) * 8;
+  const rooms = p.rooms ?? 1 + (idn % 5);
+  const garageSpaces = p.garageSpaces ?? idn % 4;
+  return {
+    ...p,
+    condicoesPagamento: cond.length ? cond : ["À vista"],
+    modalidade,
+    saleType,
+    privateArea: privateArea > 0 ? privateArea : undefined,
+    rooms: rooms > 0 ? rooms : undefined,
+    garageSpaces: garageSpaces > 0 ? garageSpaces : undefined,
+  };
 }
 
 /** Filtros rápidos 100% client-side (fallback com mock / dev). */
@@ -151,20 +222,33 @@ export function filterPropertiesClient(
   items: PropertyMapSearchItem[],
   q: QuickFiltersState,
 ): PropertyMapSearchItem[] {
-  let out = items;
+  let out = items.map(enrichMockMapItem);
   const min = q.precoMin ? Number(q.precoMin.replace(/\D/g, "")) : NaN;
   const max = q.precoMax ? Number(q.precoMax.replace(/\D/g, "")) : NaN;
   if (!Number.isNaN(min) && min > 0) out = out.filter((p) => p.preco >= min);
   if (!Number.isNaN(max) && max > 0) out = out.filter((p) => p.preco <= max);
-  if (q.tipo) out = out.filter((p) => p.tipo === q.tipo);
+  if (q.tipo.trim()) out = out.filter((p) => p.tipo === q.tipo);
   const dMin = q.descontoMin ? Number(q.descontoMin) : NaN;
   if (!Number.isNaN(dMin) && dMin > 0) {
     out = out.filter((p) => (p.desconto ?? 0) >= dMin);
   }
-  if (q.aceitaFinanciamento === "sim") {
-    out = out.filter((p) => p.aceitaFinanciamento);
-  } else if (q.aceitaFinanciamento === "nao") {
-    out = out.filter((p) => !p.aceitaFinanciamento);
+  if (q.formaPagamento.trim()) {
+    const needle = q.formaPagamento.trim().toLowerCase();
+    out = out.filter((p) => {
+      const list = (p.condicoesPagamento ?? []).map((c) => c.toLowerCase());
+      return list.some((c) => c === needle || c.includes(needle));
+    });
+  }
+  if (q.modalidade.trim()) {
+    const needle = q.modalidade.trim().toLowerCase();
+    out = out.filter((p) => {
+      const m = (p.modalidade ?? "").toLowerCase();
+      return m === needle || m.includes(needle);
+    });
+  }
+  if (q.tipoLeilao.trim()) {
+    const needle = q.tipoLeilao.trim().toLowerCase();
+    out = out.filter((p) => (p.saleType ?? "").toLowerCase() === needle);
   }
   return out;
 }
@@ -176,6 +260,7 @@ export type FetchMapPropertiesArgs = {
   quick: QuickFiltersState;
   q: string;
   bounds?: MapBoundsLiteral;
+  saleTypeQueryKey?: string | null;
 };
 
 /**
@@ -188,6 +273,7 @@ export async function fetchMapProperties({
   quick,
   q,
   bounds,
+  saleTypeQueryKey,
 }: FetchMapPropertiesArgs): Promise<{ items: PropertyMapSearchItem[]; total: number }> {
   if (process.env.NEXT_PUBLIC_USE_PROPERTY_MAP_MOCK === "true") {
     await delay(250);
@@ -215,7 +301,7 @@ export async function fetchMapProperties({
     return { items: [], total: 0 };
   }
 
-  const params = buildMapPropertiesQuery(quick, q, bounds);
+  const params = buildMapPropertiesQuery(quick, q, bounds, { saleTypeQueryKey });
   params.set("page", String(page));
   params.set("limit", String(limit));
 
@@ -234,6 +320,5 @@ export async function fetchMapProperties({
   const mapped = rows.map(mapApiPropertyToMapItem).filter(Boolean) as PropertyMapSearchItem[];
   const total = typeof json.meta?.total === "number" ? json.meta.total : mapped.length;
 
-  const withFin = filterFinanciamentoNao(mapped, quick.aceitaFinanciamento);
-  return { items: withFin, total };
+  return { items: mapped, total };
 }

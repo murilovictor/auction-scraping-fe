@@ -2,15 +2,20 @@
 
 import Image from "next/image";
 import { memo } from "react";
+import { TbBed, TbCar, TbRuler2 } from "react-icons/tb";
 import { shouldBypassNextImageOptimization } from "@/lib/shouldBypassNextImageOptimization";
 import type { PropertyMapSearchItem } from "@/types/property-map-search";
+import {
+  fmtAreaM2,
+  fmtMoney,
+  getAddressParts,
+  getAuctionRowsDisplay,
+  hasPropertySpecs,
+} from "./propertyListingShared";
 
-const fmtMoney = (n: number) =>
-  new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-    maximumFractionDigits: 0,
-  }).format(n);
+const stopCardClick = (e: { stopPropagation: () => void }) => {
+  e.stopPropagation();
+};
 
 export type PropertyCardProps = {
   property: PropertyMapSearchItem;
@@ -32,6 +37,19 @@ function PropertyCardInner({
   onToggleFavorite,
 }: PropertyCardProps) {
   const isFavorite = !!p.isFavorite;
+
+  const {
+    primeiroValor,
+    segundoValor,
+    descPrimeiro,
+    descSegundo,
+    dataPrimeiroFmt,
+    dataSegundoFmt,
+  } = getAuctionRowsDisplay(p);
+
+  const { street, localityForMaps, localityDisplay } = getAddressParts(p);
+  const hasSpecs = hasPropertySpecs(p);
+
   return (
     <article
       role="button"
@@ -103,9 +121,6 @@ function PropertyCardInner({
           <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-700">
             {p.tipo}
           </span>
-          <span className="rounded bg-sky-50 px-1.5 py-0.5 text-[10px] font-medium text-sky-800">
-            Leilão
-          </span>
           {p.aceitaFinanciamento ? (
             <span className="rounded bg-violet-50 px-1.5 py-0.5 text-[10px] font-medium text-violet-800">
               Financiamento
@@ -125,15 +140,87 @@ function PropertyCardInner({
         <h3 className="line-clamp-2 text-sm font-semibold leading-snug text-slate-900">
           {p.titulo}
         </h3>
-        <p className="mt-0.5 line-clamp-1 text-xs text-slate-500">{p.endereco}</p>
+        {street ? (
+          <a
+            href={`https://www.google.com/search?q=${encodeURIComponent(street)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-0.5 block min-w-0 max-w-full truncate text-left text-xs text-slate-500 underline decoration-slate-300 underline-offset-2 hover:text-slate-700"
+            title={street}
+            onClick={stopCardClick}
+            onKeyDown={stopCardClick}
+          >
+            {street}
+          </a>
+        ) : null}
+        {localityForMaps ? (
+          <div className="mt-1.5 flex min-w-0 items-center gap-1">
+            <a
+              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(localityForMaps)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="min-w-0 flex-1 truncate text-left text-xs text-slate-500 underline decoration-slate-300 underline-offset-2 hover:text-slate-700"
+              title={localityDisplay}
+              onClick={stopCardClick}
+              onKeyDown={stopCardClick}
+            >
+              {localityDisplay}
+            </a>
+          </div>
+        ) : null}
+        {hasSpecs ? (
+          <div
+            className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] tabular-nums text-slate-600"
+            aria-label="Características do imóvel"
+          >
+            {p.privateArea != null && p.privateArea > 0 ? (
+              <span className="inline-flex items-center gap-1" title="Área privativa">
+                <TbRuler2 className="h-3.5 w-3.5 shrink-0 text-slate-400" strokeWidth={1.5} aria-hidden />
+                {fmtAreaM2(p.privateArea)}
+              </span>
+            ) : null}
+            {p.rooms != null && p.rooms > 0 ? (
+              <span className="inline-flex items-center gap-1" title="Quartos">
+                <TbBed className="h-3.5 w-3.5 shrink-0 text-slate-400" strokeWidth={1.5} aria-hidden />
+                {p.rooms} {p.rooms === 1 ? "quarto" : "quartos"}
+              </span>
+            ) : null}
+            {p.garageSpaces != null && p.garageSpaces > 0 ? (
+              <span className="inline-flex items-center gap-1" title="Vagas">
+                <TbCar className="h-3.5 w-3.5 shrink-0 text-slate-400" strokeWidth={1.5} aria-hidden />
+                {p.garageSpaces} {p.garageSpaces === 1 ? "vaga" : "vagas"}
+              </span>
+            ) : null}
+          </div>
+        ) : null}
         <p className="mt-1 text-[11px] text-slate-500">
           Avaliação:{" "}
           <span className="font-medium text-slate-700">{fmtMoney(p.valorAvaliacao)}</span>
         </p>
-        <div className="mt-1 flex flex-wrap items-baseline gap-2">
-          <span className="text-base font-bold text-sky-600">{fmtMoney(p.preco)}</span>
-          {p.desconto != null && p.desconto > 0 ? (
-            <span className="text-xs font-medium text-emerald-700">-{p.desconto}%</span>
+        <div className="mt-1.5 space-y-1 text-[11px] leading-snug">
+          {primeiroValor != null ? (
+            <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+              <span className="font-semibold text-slate-600">1º leilão</span>
+              <span className="text-sm font-bold text-sky-600">{fmtMoney(primeiroValor)}</span>
+              {dataPrimeiroFmt ? (
+                <span className="text-slate-500">· {dataPrimeiroFmt}</span>
+              ) : null}
+              {descPrimeiro != null && descPrimeiro > 0 ? (
+                <span className="font-medium text-emerald-700">−{descPrimeiro.toFixed(0)}%</span>
+              ) : null}
+            </div>
+          ) : null}
+          {segundoValor != null ? (
+            <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+              <span className="font-semibold text-slate-600">2º leilão</span>
+              <span className="text-sm font-bold text-sky-700">{fmtMoney(segundoValor)}</span>
+              {dataSegundoFmt ? (
+                <span className="text-slate-500">· {dataSegundoFmt}</span>
+              ) : null}
+              {descSegundo != null && descSegundo > 0 ? (
+                <span className="font-medium text-emerald-700">−{descSegundo.toFixed(0)}%</span>
+              ) : null}
+            </div>
           ) : null}
         </div>
       </div>

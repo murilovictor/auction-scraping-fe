@@ -28,6 +28,8 @@ export type PropertyApi = {
   rooms?: number;
   garageSpaces?: number;
   saleType?: string;
+  /** Modalidade do leilão (quando o backend expõe o campo) */
+  modality?: string;
   paymentConditions?: string[];
   expensePaymentRules?: string[];
   importantObservations?: string[];
